@@ -7,3 +7,5 @@ passlib[bcrypt]
 psycopg2-binary   # Para usar PostgreSQL
 pymongo           # Para usar MongoDB (opcional)
 pytest
+lxml
+jsonschema
