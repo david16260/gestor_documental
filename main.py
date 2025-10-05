@@ -1,6 +1,13 @@
 from fastapi import FastAPI
 
 from app.api.documentos import router as documentos_router
+import logging
+
+logging.basicConfig(
+    filename="app/logs/app.log",
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 
 app = FastAPI()
 

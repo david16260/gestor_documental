@@ -1,9 +1,9 @@
-    from pydantic import BaseModel
+from pydantic import BaseModel
 
-    print("Cargando documento.py")
+print("Cargando documento.py")
 
-    class UploadResponse(BaseModel):
-        filename: str
-        size_kb: float
-        duplicate: bool
-        saved_path: str
+class UploadResponse(BaseModel):
+    filename: str
+    size_kb: float
+    duplicate: bool
+    saved_path: str
