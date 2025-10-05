@@ -9,3 +9,10 @@ pymongo           # Para usar MongoDB (opcional)
 pytest
 lxml
 jsonschema
+pydantic    # Para definir modelos de datos y validación de respuestas  
+pathlib     # Biblioteca estándar para manejo de rutas de archivos 
+hashlib     # Biblioteca estándar para generar hashes 
+
+# Otros paquetes necesarios para el proyecto
+mysql-connector-python    # Conector para MySQL, usado en app/core/config.py
+python-decouple           # Para leer variables de entorno desde .env

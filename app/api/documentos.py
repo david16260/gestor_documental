@@ -5,8 +5,7 @@ import hashlib
 import json
 from lxml import etree
 from jsonschema import validate, ValidationError
-
-from app.core.config import UPLOAD_DIR, ALLOWED_EXTENSIONS, MAX_SIZE_BYTES
+from app.core.config import get_db_connection, ALLOWED_EXTENSIONS, MAX_SIZE_BYTES, UPLOAD_DIR
 from app.models.documento import UploadResponse
 
 print(f"Extensiones permitidas cargadas: {ALLOWED_EXTENSIONS}")  # Depuración
@@ -66,6 +65,11 @@ async def upload_file(file: UploadFile = File(...)):
             print(f"Error inesperado: {e}")
             raise HTTPException(status_code=400, detail=f"Error en validación JSON: {str(e)}")
 
+    # Generar versión
+    version = file_hash(contents)[:8]
+    # Obtener usuario
+    user = "root"
+
     # Proceder con hash y guardado
     hash_value = file_hash(contents)
     hash_path = UPLOAD_DIR / f"{hash_value}{ext}"
@@ -74,6 +78,19 @@ async def upload_file(file: UploadFile = File(...)):
     if not duplicate:
         with open(hash_path, "wb") as f:
             f.write(contents)
+
+    # Guardar en MySQL
+    conn = get_db_connection()
+    if conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO file_logs (filename, version, user, saved_path) VALUES (%s, %s, %s, %s)",
+            (file.filename, version, user, str(hash_path))
+        )
+        conn.commit()
+        conn.close()
+    else:
+        raise HTTPException(status_code=500, detail="Error connecting to database")
 
     return UploadResponse(
         filename=file.filename,
