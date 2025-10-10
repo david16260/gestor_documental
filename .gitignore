@@ -1,6 +1,5 @@
 # ---- Entornos virtuales ----
 venv/
-.env/
 .venv/
 
 # ---- Archivos de Python ----

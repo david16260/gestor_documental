@@ -1,9 +1,24 @@
+# Framework
 fastapi
 uvicorn
+
+# Base de datos y ORM
 sqlalchemy
+psycopg2-binary
+
+# Validación y utilidades
 pydantic
+python-decouple
 python-multipart
-passlib[bcrypt]
-psycopg2-binary   # Para usar PostgreSQL
-pymongo           # Para usar MongoDB (opcional)
+lxml
+jsonschema
+
+# Testing
 pytest
+
+# Archivos PDF y Excel
+PyPDF2
+openpyxl
+
+# Detección tipo de archivo
+python-magic

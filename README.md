@@ -61,11 +61,19 @@ Implementar la base del sistema de gestión documental en **Python + FastAPI**, 
 1. Activar entorno virtual:
    ```bash
    .\venv\Scripts\activate
+   source venv/Scripts/activate
 ## Instalar dependencias:   
  pip install -r requirements.txt
 
+## Instalar venv
+python -m venv venv 
+
 ## Levantar servidor
 uvicorn app.main:app --reload
+
+## Salir del venv
+deactivate
+
 
 ## Probar navegador
 http://127.0.0.1:8000/docs
