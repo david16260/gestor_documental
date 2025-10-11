@@ -1,24 +1,29 @@
 # Framework
-fastapi
-uvicorn
+fastapi==0.109.1
+uvicorn[standard]==0.23.2
 
 # Base de datos y ORM
-sqlalchemy
-psycopg2-binary
+sqlalchemy==2.0.22
+psycopg2-binary==2.9.7
 
 # Validación y utilidades
-pydantic
-python-decouple
-python-multipart
-lxml
-jsonschema
-
-# Testing
-pytest
+pydantic==2.6.2
+python-decouple==4.7.1
+python-multipart==0.0.6
+lxml==4.9.3
+jsonschema==4.21.1
 
 # Archivos PDF y Excel
-PyPDF2
-openpyxl
+PyPDF2==3.1.0
+openpyxl==3.2.3
 
 # Detección tipo de archivo
-python-magic
+python-magic-bin==0.4.27  # en Windows se usa python-magic-bin
+
+# Seguridad / Hashing
+passlib[bcrypt]==1.7.5
+python-jose==3.3.0  # para JWT
+
+# Testing
+pytest==7.4.2
+httpx==1.7.3  # para tests de FastAPI
