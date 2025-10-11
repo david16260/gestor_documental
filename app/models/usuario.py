@@ -7,6 +7,10 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True, index=True)
     nombre = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)  # 🔹 Cambiado de password
+    password_hash = Column(String, nullable=False)
     fecha_creacion = Column(DateTime, server_default=func.now())
     creado_en = Column(DateTime, server_default=func.now())
+    
+    # Campos para recuperación de contraseña
+    reset_token = Column(String(100), nullable=True)
+    reset_token_exp = Column(DateTime, nullable=True)
