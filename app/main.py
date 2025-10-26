@@ -4,9 +4,11 @@ from app.database import engine, Base
 from app.api import auth
 from app.api import documentos
 from app.api import documentos_versiones
+from app.api import fuid 
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from app.api import integration_router
 
 # Crear todas las tablas en la base de datos (si no existen)
 Base.metadata.create_all(bind=engine)
@@ -66,6 +68,8 @@ async def historial_page(request: Request):
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
 app.include_router(documentos.router, prefix="/documentos")        # Upload, historial
 app.include_router(documentos_versiones.router)                    # Versiones API
+app.include_router(fuid.router, prefix="/fuid", tags=["FUID"])    #fluid
+app.include_router(integration_router.router, tags=["Integración IA-FUID"])  # integración IA-FUID
 
 # ===============================
 # Nota:
