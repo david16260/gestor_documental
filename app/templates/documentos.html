@@ -2,57 +2,21 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Gestor Documental - Subida de Archivos</title>
+    <title>Gestor Documental - Subida por URL</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <style>
-        body {
-            background: #f8f9fa;
-            font-family: Arial, sans-serif;
-            padding-top: 80px;
-        }
-        .container {
-            max-width: 600px;
-            background: #fff;
-            padding: 25px;
-            border-radius: 12px;
-            box-shadow: 0 0 12px rgba(0,0,0,0.1);
-        }
-        .resultado {
-            margin-top: 20px;
-        }
-        .header {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            background: #0d6efd;
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 25px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-            z-index: 10;
-        }
-        .header .usuario {
-            font-weight: bold;
-        }
-        .header button {
-            color: #fff;
-            border: none;
-            background: rgba(255,255,255,0.2);
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-        .header button:hover {
-            background: rgba(255,255,255,0.35);
-        }
+        body { background: #f8f9fa; font-family: Arial, sans-serif; padding-top: 80px; }
+        .container { max-width: 700px; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 0 12px rgba(0,0,0,0.1); }
+        .resultado { margin-top: 20px; }
+        .header { position: fixed; top: 0; left: 0; width: 100%; background: #0d6efd; color: white; display: flex; justify-content: space-between; align-items: center; padding: 10px 25px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
+        .header .usuario { font-weight: bold; }
+        .header button { color: #fff; border: none; background: rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px; cursor: pointer; }
+        .header button:hover { background: rgba(255,255,255,0.35); }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
     </style>
 </head>
 <body>
 
-<!-- HEADER SUPERIOR -->
 <div class="header" id="header-bar" style="display: none;">
     <div>
         <button id="back-btn" class="me-2">⬅ Volver</button>
@@ -62,7 +26,7 @@
 </div>
 
 <div class="container">
-    <h3 class="text-center mb-4">📄 Subir Documento</h3>
+    <h3 class="text-center mb-4">📄 Subir Documento por URL</h3>
 
     <!-- Login rápido -->
     <div id="login-section">
@@ -80,19 +44,19 @@
         </form>
     </div>
 
-    <!-- Subida de documentos -->
+    <!-- Subida por URL -->
     <div id="upload-section" style="display: none;">
         <div id="usuario-info" class="mb-3"></div>
-        <form id="upload-form" enctype="multipart/form-data">
+        <form id="upload-form">
             <div class="mb-3">
-                <label for="file" class="form-label">Seleccionar archivo</label>
-                <input type="file" class="form-control" id="file" name="file" required>
+                <label for="url" class="form-label">Pega la URL pública (Drive, OneDrive o enlace directo)</label>
+                <input type="url" class="form-control" id="url" placeholder="https://drive.google.com/file/d/..." required>
             </div>
             <div class="mb-3">
                 <label for="version" class="form-label">Versión</label>
                 <input type="text" class="form-control" id="version" name="version" placeholder="Ej: 1.0">
             </div>
-            <button type="submit" class="btn btn-success w-100">Subir documento</button>
+            <button type="submit" id="submit-btn" class="btn btn-success w-100">Subir Documento</button>
         </form>
 
         <div class="resultado" id="resultado"></div>
@@ -104,8 +68,7 @@ const API_BASE = "http://127.0.0.1:8000";
 let token = localStorage.getItem("access_token");
 let usuarioActual = localStorage.getItem("usuario_nombre");
 
-// Mostrar sección correcta
-if (token) {
+function showLoggedInState() {
     document.getElementById("login-section").style.display = "none";
     document.getElementById("upload-section").style.display = "block";
     document.getElementById("header-bar").style.display = "flex";
@@ -113,11 +76,15 @@ if (token) {
     document.getElementById("usuario-info-header").innerText = `Conectado como ${usuarioActual}`;
 }
 
+if (token) {
+    showLoggedInState();
+}
+
 // --- LOGIN ---
 document.getElementById("login-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData();
-    formData.append("email", document.getElementById("email").value);
+    formData.append("username", document.getElementById("email").value);
     formData.append("password", document.getElementById("password").value);
 
     const resp = await fetch(`${API_BASE}/auth/login`, {
@@ -126,59 +93,61 @@ document.getElementById("login-form").addEventListener("submit", async (e) => {
     });
 
     const data = await resp.json();
-
     if (resp.ok) {
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("usuario_nombre", data.usuario);
         token = data.access_token;
         usuarioActual = data.usuario;
-
         alert(`✅ Bienvenido, ${usuarioActual}`);
-        document.getElementById("login-section").style.display = "none";
-        document.getElementById("upload-section").style.display = "block";
-        document.getElementById("header-bar").style.display = "flex";
-        document.getElementById("usuario-info").innerHTML = `🔒 Sesión activa como: <strong>${usuarioActual}</strong>`;
-        document.getElementById("usuario-info-header").innerText = `Conectado como ${usuarioActual}`;
+        showLoggedInState();
     } else {
         alert(data.detail || "Error al iniciar sesión");
     }
 });
 
-// --- SUBIDA DE DOCUMENTOS ---
+// --- SUBIR POR URL ---
 document.getElementById("upload-form").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const formData = new FormData();
-    formData.append("usuario", usuarioActual);
-    formData.append("file", document.getElementById("file").files[0]);
+    const url = document.getElementById("url").value.trim();
+    if (!url) {
+        alert("Ingresa una URL válida");
+        return;
+    }
+    let version = document.getElementById("version").value.trim() || "1.0";
 
-    let version = document.getElementById("version").value.trim();
-    if (!version) version = "1.0";
-    formData.append("version", version);
-
-    const resp = await fetch(`${API_BASE}/documentos/upload`, {
+    const resp = await fetch(`${API_BASE}/documentos/desde-url`, {
         method: "POST",
         headers: {
-            "Authorization": `Bearer ${token}`
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
         },
-        body: formData
+        body: JSON.stringify({ url, version })
     });
 
     const data = await resp.json();
     const resultado = document.getElementById("resultado");
 
     if (resp.ok) {
+        const doc = data.documento || {};
+        const extra = data.metadatos_extra || {};
         resultado.innerHTML = `
             <div class="alert alert-success">
                 ✅ ${data.mensaje}<br>
-                <strong>Versión:</strong> ${data.version}<br>
-                <strong>Usuario:</strong> ${usuarioActual}<br>
-                <strong>Hash MD5:</strong> ${data.hash_md5}
+                <strong>ID:</strong> ${doc.id} <br>
+                <strong>Nombre:</strong> ${doc.nombre} <br>
+                <strong>Extensión:</strong> ${doc.extension} <br>
+                <strong>Tamaño (KB):</strong> ${doc.tamano_kb} <br>
+                <strong>Duplicado:</strong> ${doc.duplicado} <br>
+                <strong>Ruta:</strong> <code>${doc.ruta_guardado}</code>
+                <hr>
+                <strong>Metadatos adicionales:</strong>
+                <pre>${JSON.stringify(extra, null, 2)}</pre>
             </div>
         `;
     } else {
         resultado.innerHTML = `
             <div class="alert alert-danger">
-                ⚠️ Error: ${data.detail || "No se pudo subir el archivo"}
+                ⚠️ Error: ${data.detail || "No se pudo procesar la URL"}
             </div>
         `;
     }
