@@ -15,7 +15,14 @@ class Documento(Base):
     duplicado = Column(Boolean, default=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
     creado_en = Column(DateTime, server_default=func.now())
+
     # Metadatos extra
     content_type = Column(String, nullable=True)
     last_modified = Column(String, nullable=True)
     servidor = Column(String, nullable=True)
+
+    # Clasificación documental
+    tipo_documento = Column(String, nullable=True)
+    categoria = Column(String, nullable=True)
+    confidencialidad = Column(String, nullable=True)
+    autor = Column(String, nullable=True)
