@@ -1,4 +1,4 @@
-# app/models/documento.py
+# app/models/documento.py - MANTENER ESTE CÓDIGO
 from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, ForeignKey, func
 from app.database import Base
 

@@ -27,3 +27,17 @@ python-jose==3.3.0  # para JWT
 # Testing
 pytest==7.4.2
 httpx==1.7.3  # para tests de FastAPI
+
+# ========== NUEVAS DEPENDENCIAS PARA SGDEA ==========
+# GraphQL
+strawberry-graphql==0.215.0
+
+# Serialización XML avanzada
+xmltodict==0.13.0
+
+# Variables de entorno (complemento)
+python-dotenv==1.0.0
+
+# Utilidades adicionales
+python-dateutil==2.8.2
+pytz==2023.3
