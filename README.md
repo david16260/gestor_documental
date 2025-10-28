@@ -65,6 +65,8 @@ Implementar la base del sistema de gestión documental en **Python + FastAPI**, 
 ## Instalar dependencias:   
  pip install -r requirements.txt
 
+ pip install lxml
+
 ## Instalar venv
 python -m venv venv 
 
