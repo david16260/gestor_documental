@@ -10,12 +10,17 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from app.api import documentos_url
 from app.api import integration_router
+from app.core.config import settings
 
 # Crear todas las tablas en la base de datos (si no existen)
 Base.metadata.create_all(bind=engine)
 
 # Crear la aplicación FastAPI
-app = FastAPI(title="Gestor Documental")
+app = FastAPI(
+    title="Gestor Documental - SGDEA",
+    description="Sistema de Gestión Documental Electrónica de Archivo con APIs REST y GraphQL",
+    version="2.0.0"
+)
 
 # Montar directorio estático
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
@@ -63,19 +68,73 @@ async def historial_page(request: Request):
         "titulo": "Historial Documento | Gestor Documental"
     })
 
+@app.get("/sgdea", response_class=HTMLResponse)
+async def sgdea_dashboard(request: Request):
+    """
+    Dashboard para las APIs SGDEA
+    """
+    return templates.TemplateResponse("sgdea_dashboard.html", {
+        "request": request,
+        "titulo": "SGDEA - Gestión Documental Electrónica"
+    })
+
 # ===============================
 # REGISTRAR ROUTERS
 # ===============================
+
+# APIs existentes
 app.include_router(auth.router, prefix="/auth", tags=["Autenticación"])
-app.include_router(documentos.router, prefix="/documentos")        # Upload, historial
-app.include_router(documentos_versiones.router)                    # Versiones API
-app.include_router(fuid.router, prefix="/fuid", tags=["FUID"])    #fluid
+app.include_router(documentos.router, prefix="/documentos", tags=["Documentos"])        # Upload, historial
+app.include_router(documentos_versiones.router, tags=["Versiones"])                    # Versiones API
+app.include_router(fuid.router, prefix="/fuid", tags=["FUID"])    # FUID
 app.include_router(integration_router.router, tags=["Integración IA-FUID"])  # integración IA-FUID
+app.include_router(documentos_url.router, prefix="/documentos", tags=["Documentos URL"])
 
 # ===============================
-# Nota:
-# - API JSON: /documentos/versiones -> devuelve las versiones
-# - HTML: /versiones/html -> página con tabla de versiones
+# APIs SGDEA - NUEVAS
+# ===============================
+# Incluir el router SGDEA desde documentos.py
+app.include_router(
+    documentos.sgdea_router, 
+    prefix="/api/v1/sgdea", 
+    tags=["SGDEA - APIs"]
+)
+
+# ===============================
+# ENDPOINTS DE INFORMACIÓN DEL SISTEMA
+# ===============================
+@app.get("/health")
+async def health_check():
+    """Endpoint de salud del sistema"""
+    return {
+        "status": "healthy", 
+        "service": "Gestor Documental SGDEA",
+        "version": "2.0.0"
+    }
+
+@app.get("/api/info")
+async def system_info():
+    """Información del sistema y APIs disponibles"""
+    return {
+        "system": "Gestor Documental - SGDEA",
+        "version": "2.0.0",
+        "apis_available": {
+            "sgdea": {
+                "documentos": "/api/v1/sgdea/sgdea/",
+                "expedientes": "/api/v1/sgdea/sgdea/expedientes/", 
+                "inventarios": "/api/v1/sgdea/sgdea/inventarios/",
+                "exportacion": "/api/v1/sgdea/sgdea/inventarios/exportar/{id}"
+            },
+            "documentos": "/documentos",
+            "autenticacion": "/auth",
+            "versiones": "/versiones",
+            "fuid": "/fuid",
+            "integracion_ia": "/integracion"
+        }
+    }
+
+# ===============================
+# PÁGINAS ADICIONALES
 # ===============================
 @app.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
@@ -84,5 +143,3 @@ async def forgot_password_page(request: Request):
 @app.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request):
     return templates.TemplateResponse("reset_password.html", {"request": request})
-
-app.include_router(documentos_url.router, prefix="/documentos")

@@ -26,3 +26,4 @@ class Documento(Base):
     categoria = Column(String, nullable=True)
     confidencialidad = Column(String, nullable=True)
     autor = Column(String, nullable=True)
+    

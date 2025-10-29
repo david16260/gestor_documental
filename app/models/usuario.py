@@ -8,7 +8,7 @@ class Usuario(Base):
     nombre = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password_hash = Column(String, nullable=False)
-    rol = Column(String(50), nullable=False, server_default="user") # <-- nuevo campo
+    rol = Column(String(50), nullable=False, server_default="user")  # <-- campo de rol incluido
     fecha_creacion = Column(DateTime, server_default=func.now())
     creado_en = Column(DateTime, server_default=func.now())
     
