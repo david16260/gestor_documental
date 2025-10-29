@@ -7,6 +7,7 @@ from app.api import documentos_versiones
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from app.api import documentos_url
 
 # Crear todas las tablas en la base de datos (si no existen)
 Base.metadata.create_all(bind=engine)
@@ -79,3 +80,5 @@ async def forgot_password_page(request: Request):
 @app.get("/reset-password", response_class=HTMLResponse)
 async def reset_password_page(request: Request):
     return templates.TemplateResponse("reset_password.html", {"request": request})
+
+app.include_router(documentos_url.router, prefix="/documentos")
