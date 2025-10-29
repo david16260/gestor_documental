@@ -56,13 +56,29 @@ def register(
 # ===================================
 # GENERAR TOKEN JWT
 # ===================================
+# al generar el token
 def crear_token_jwt(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+to_encode = data.copy()
+expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+to_encode.update({"exp": expire})
+encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+return encoded_jwt
 
+
+# al crear token de acceso (dentro del endpoint login)
+access_token = crear_token_jwt({"sub": str(usuario.id), "rol": usuario.rol})
+
+
+# dependencia para exigir roles
+from fastapi import Depends
+
+
+def require_role(*allowed_roles: str):
+def _require_role(current_user: Usuario = Depends(get_current_user)):
+if current_user.rol not in allowed_roles:
+raise HTTPException(status_code=403, detail="No tienes permisos para acceder a este recurso")
+return current_user
+return _require_role
 # ===================================
 # LOGIN (DEVUELVE TOKEN)
 # ===================================
