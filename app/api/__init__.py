@@ -1,32 +1,17 @@
-# app/main.py
-from fastapi import FastAPI
-from app.database import engine, Base
-from app.routers import xml_router  # Nuevo import
+# app/api/__init__.py
+# Este archivo puede estar vacío o contener solo:
+from . import auth
+from . import documentos
+from . import documentos_versiones
+from . import fuid
+from . import documentos_url
+from . import integration_router
 
-# Crear tablas
-Base.metadata.create_all(bind=engine)
-
-app = FastAPI(
-    title="Gestor Documental con IA",
-    description="Sistema de gestión documental - Sprint 1",
-    version="1.0.0"
-)
-
-# Incluir routers existentes
-# app.include_router(users_router.router)
-# app.include_router(upload_router.router)
-
-# Incluir nuevo router de XML
-app.include_router(xml_router.router)
-
-@app.get("/")
-def read_root():
-    return {
-        "mensaje": "Gestor Documental con IA",
-        "version": "1.0.0",
-        "endpoints_disponibles": [
-            "/docs - Documentación interactiva",
-            "/xml/documento/{id} - Generar XML individual",
-            "/xml/expediente/usuario/{id} - Generar XML expediente completo"
-        ]
-    }
+__all__ = [
+    "auth",
+    "documentos", 
+    "documentos_versiones",
+    "fuid",
+    "documentos_url", 
+    "integration_router"
+]

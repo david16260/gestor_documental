@@ -17,3 +17,15 @@ DATABASE_URL = f"{DB_ENGINE}://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_N
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
+
+# FUNCIÓN FALTANTE - AGREGAR ESTO:
+def get_db():
+    """
+    Dependencia para obtener sesión de base de datos.
+    Crea una sesión y la cierra automáticamente al finalizar.
+    """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

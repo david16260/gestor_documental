@@ -1,7 +1,8 @@
+# app/core/auditoria_controller.py
+from sqlalchemy.orm import Session
 from app.models.auditoria_model import Auditoria
-from database import db
 
-def registrar_auditoria(usuario, accion, entidad, detalle=None):
+def registrar_auditoria(db: Session, usuario: str, accion: str, entidad: str, detalle: str = None):
     """Guarda un registro de auditoría en la base de datos."""
     nuevo_registro = Auditoria(
         usuario=usuario,
@@ -9,9 +10,11 @@ def registrar_auditoria(usuario, accion, entidad, detalle=None):
         entidad=entidad,
         detalle=detalle
     )
-    db.session.add(nuevo_registro)
-    db.session.commit()
+    db.add(nuevo_registro)
+    db.commit()
+    db.refresh(nuevo_registro)
+    return nuevo_registro
 
-def obtener_auditoria():
+def obtener_auditoria(db: Session, skip: int = 0, limit: int = 100):
     """Devuelve los registros de auditoría más recientes."""
-    return Auditoria.query.order_by(Auditoria.fecha_hora.desc()).all()
+    return db.query(Auditoria).order_by(Auditoria.fecha_hora.desc()).offset(skip).limit(limit).all()

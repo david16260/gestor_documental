@@ -1,15 +1,17 @@
+# app/models/auditoria_model.py
+from sqlalchemy import Column, Integer, String, Text, DateTime
 from datetime import datetime
-from app import db
+from app.database import Base
 
-class Auditoria(db.Model):
+class Auditoria(Base):
     __tablename__ = 'auditoria'
 
-    id = db.Column(db.Integer, primary_key=True)
-    usuario = db.Column(db.String(100), nullable=False)
-    accion = db.Column(db.String(255), nullable=False)
-    entidad = db.Column(db.String(100), nullable=False)
-    detalle = db.Column(db.Text, nullable=True)
-    fecha_hora = db.Column(db.DateTime, default=datetime.utcnow)
+    id = Column(Integer, primary_key=True, index=True)
+    usuario = Column(String(100), nullable=False)
+    accion = Column(String(255), nullable=False)
+    entidad = Column(String(100), nullable=False)
+    detalle = Column(Text, nullable=True)
+    fecha_hora = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
         return f'<Auditoria {self.usuario} - {self.accion}>'
