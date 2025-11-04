@@ -40,6 +40,7 @@ def calcular_md5_contenido(contenido: bytes) -> str:
 async def upload_file(
     file: UploadFile = File(...),
     version: str = Form(...),
+    categoria: str = Form(None),
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user)
 ):
@@ -103,7 +104,10 @@ async def upload_file(
         ruta_guardado=str(file_path),
         tamano_kb=len(contents) / 1024,
         duplicado=False,
-        usuario_id=current_user.id
+        usuario_id=current_user.id,
+        categoria=categoria,
+        content_type=file.content_type,
+        last_modified=datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     )
     db.add(nuevo_doc)
     db.commit()
@@ -125,6 +129,7 @@ async def upload_file(
         "mensaje": f"Archivo '{file.filename}' cargado correctamente.",
         "documento_id": nuevo_doc.id,
         "hash_md5": nuevo_hash,
+        "categoria": categoria,
         "tipo_archivo": tipo_archivo,
         "tamano_kb": round(nuevo_doc.tamano_kb, 2),
         "version": version,

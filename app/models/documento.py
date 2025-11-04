@@ -19,3 +19,4 @@ class Documento(Base):
     content_type = Column(String, nullable=True)
     last_modified = Column(String, nullable=True)
     servidor = Column(String, nullable=True)
+    categoria = Column(String, nullable=True) 
