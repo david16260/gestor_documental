@@ -14,6 +14,7 @@ router = APIRouter(tags=["Documentos desde URL"])
 class URLRequest(BaseModel):
     url: HttpUrl
     version: str | None = "1.0"
+    categoria: str | None = None
 
 @router.post("/desde-url")
 def desde_url(req: URLRequest, db: Session = Depends(get_db), usuario = Depends(get_current_user)):
@@ -56,6 +57,7 @@ def desde_url(req: URLRequest, db: Session = Depends(get_db), usuario = Depends(
         creado_en=creado_en,
         content_type=metadata.get("content_type"),
         last_modified=metadata.get("last_modified"),
+        categoria=req.categoria,
         servidor=metadata.get("servidor")
     )
 
@@ -75,7 +77,8 @@ def desde_url(req: URLRequest, db: Session = Depends(get_db), usuario = Depends(
             "tamano_kb": nuevo.tamano_kb,
             "ruta_guardado": nuevo.ruta_guardado,
             "duplicado": nuevo.duplicado,
-            "creado_en": nuevo.creado_en.isoformat() if nuevo.creado_en else None
+            "creado_en": nuevo.creado_en.isoformat() if nuevo.creado_en else None,
+            "categoria": nuevo.categoria
         },
         "metadatos_extra": {k: v for k, v in metadata.items() if k not in ("nombre_archivo", "extension", "version", "hash_archivo", "ruta_guardado", "tamano_kb")}
     }
