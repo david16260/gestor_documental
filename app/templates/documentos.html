@@ -75,6 +75,13 @@
             </button>
         </form>
 
+        <!-- Botón para generar índice foliado -->
+        <div class="mt-3">
+            <button id="btn-indice" class="btn btn-primary w-100">📋 Generar índice foliado</button>
+        </div>
+
+        <div id="indice-resultado" class="mt-3"></div>
+
         <div class="resultado" id="resultado"></div>
     </div>
 </div>
@@ -329,6 +336,82 @@ document.getElementById("url").addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
         e.preventDefault();
         document.getElementById("upload-form").dispatchEvent(new Event("submit"));
+    }
+});
+
+// --- GENERAR ÍNDICE FOLIADO ---
+document.getElementById("btn-indice").addEventListener("click", async () => {
+    if (!token) {
+        alert('Debes iniciar sesión para generar el índice foliado');
+        return;
+    }
+
+    const resultadoCont = document.getElementById('indice-resultado');
+    resultadoCont.innerHTML = '<div class="alert alert-info">Generando índice foliado...</div>';
+
+    try {
+        const resp = await fetch(`${API_BASE}/documentos/indice_foliado`, {
+            method: 'GET',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        if (!resp.ok) {
+            const err = await resp.json();
+            resultadoCont.innerHTML = `<div class="alert alert-danger">Error: ${err.detail || resp.statusText}</div>`;
+            return;
+        }
+
+        const data = await resp.json();
+
+        // Construir tabla HTML con el índice
+        let html = `
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Índice foliado (usuario ${data.usuario_id})</h5>
+                    <p>Total documentos: <strong>${data.total_documentos}</strong> — Total páginas estimadas: <strong>${data.total_paginas}</strong></p>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead><tr><th>Orden</th><th>Documento</th><th>Tamaño (KB)</th><th>Inicio</th><th>Fin</th><th>Fecha</th></tr></thead>
+                            <tbody>
+        `;
+
+        for (const fila of data.indice) {
+            html += `<tr><td>${fila.orden}</td><td>${fila.nombre_archivo}</td><td>${fila.tamano_kb}</td><td>${fila.pagina_inicio}</td><td>${fila.pagina_fin}</td><td>${fila.fecha || '-'}</td></tr>`;
+        }
+
+        html += `</tbody></table></div>`;
+
+        // Botones: descargar CSV
+        html += `<div class="mt-2"><button id="descargar-csv" class="btn btn-outline-primary btn-sm">Descargar CSV</button></div>`;
+        html += `</div></div>`;
+
+        resultadoCont.innerHTML = html;
+
+        document.getElementById('descargar-csv').addEventListener('click', async () => {
+            // Solicitar CSV y forzar descarga
+            const respCsv = await fetch(`${API_BASE}/documentos/indice_foliado?formato=csv`, {
+                method: 'GET', headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!respCsv.ok) {
+                const err = await respCsv.text();
+                alert('Error al generar CSV: ' + err);
+                return;
+            }
+
+            const blob = await respCsv.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `indice_foliado_user_${localStorage.getItem('usuario_nombre') || 'user'}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            window.URL.revokeObjectURL(url);
+        });
+
+    } catch (error) {
+        resultadoCont.innerHTML = `<div class="alert alert-danger">Error de conexión: ${error.message}</div>`;
     }
 });
 </script>

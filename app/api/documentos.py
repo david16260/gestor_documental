@@ -6,6 +6,7 @@
 # ============================================================
 
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form, Query
+from fastapi.responses import StreamingResponse
 from pathlib import Path
 from sqlalchemy.orm import Session
 from app.database import SessionLocal
@@ -20,6 +21,9 @@ from PyPDF2 import PdfReader
 import openpyxl
 from datetime import datetime
 from typing import List, Optional
+import io
+import csv
+import math
 
 # ============================================================
 # 🚀 Configuración del router
@@ -454,3 +458,70 @@ async def exportar_inventario_sgdea(
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al exportar inventario: {str(e)}")
+
+
+# ============================================================
+# 📇 ENDPOINT: Generar índice foliado para el usuario autenticado
+# ============================================================
+@router.get("/indice_foliado")
+def generar_indice_foliado(
+    formato: str = Query("json", description="Formato de salida: json o csv"),
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user)
+):
+    """
+    Genera un índice foliado para todos los documentos del usuario autenticado.
+    Devuelve una lista con el orden, nombre de archivo, tamaño y páginas inicio/fin.
+    Parámetros:
+    - formato: 'json' (por defecto) o 'csv'
+    """
+    try:
+        # Obtener documentos del usuario ordenados por fecha de creación
+        documentos = db.query(Documento).filter(Documento.usuario_id == current_user.id).order_by(Documento.creado_en).all()
+
+        if not documentos:
+            raise HTTPException(status_code=404, detail="No se encontraron documentos para el usuario")
+
+        indice = []
+        pagina_actual = 1
+
+        for idx, doc in enumerate(documentos, start=1):
+            # Calcular páginas estimadas usando la misma heurística que el xml generator
+            num_paginas = max(1, int(doc.tamano_kb / 100))
+            pagina_fin = pagina_actual + num_paginas - 1
+
+            indice.append({
+                "orden": idx,
+                "documento_id": doc.id,
+                "nombre_archivo": doc.nombre_archivo,
+                "tamano_kb": round(float(doc.tamano_kb), 2),
+                "pagina_inicio": pagina_actual,
+                "pagina_fin": pagina_fin,
+                "fecha": doc.creado_en.strftime("%Y-%m-%d %H:%M:%S") if doc.creado_en else None
+            })
+
+            pagina_actual = pagina_fin + 1
+
+        # Si el cliente solicitó CSV, construir respuesta streaming
+        if formato.lower() == "csv":
+            output = io.StringIO()
+            writer = csv.writer(output)
+            writer.writerow(["orden", "documento_id", "nombre_archivo", "tamano_kb", "pagina_inicio", "pagina_fin", "fecha"])
+            for fila in indice:
+                writer.writerow([
+                    fila["orden"], fila["documento_id"], fila["nombre_archivo"], fila["tamano_kb"], fila["pagina_inicio"], fila["pagina_fin"], fila["fecha"]
+                ])
+            output.seek(0)
+            headers = {
+                "Content-Disposition": f"attachment; filename=indice_foliado_user_{current_user.id}.csv"
+            }
+            return StreamingResponse(output, media_type="text/csv", headers=headers)
+
+        # Por defecto devolver JSON con índice y total de páginas
+        total_paginas = pagina_actual - 1
+        return {"usuario_id": current_user.id, "total_documentos": len(documentos), "total_paginas": total_paginas, "indice": indice}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error al generar índice foliado: {str(e)}")
