@@ -27,31 +27,29 @@ router = APIRouter(tags=["Autenticación"])
 # ===================================
 # REGISTRO DE USUARIOS
 # ===================================
-@router.post("/register")
-def register(
-    nombre: str = Form(...),
-    email: str = Form(...),
-    password: str = Form(...),
-    db: Session = Depends(get_db)
-):
-    user_existente = db.query(Usuario).filter(Usuario.email == email).first()
-    if user_existente:
-        raise HTTPException(status_code=400, detail="El correo ya está registrado")
+@router.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
 
-    nuevo_usuario = Usuario(
-        nombre=nombre,
-        email=email,
-        password_hash=hash_password(password)
-    )
-    db.add(nuevo_usuario)
-    db.commit()
-    db.refresh(nuevo_usuario)
+    if not usuario or not verify_password(form_data.password, usuario.password_hash):
+        raise HTTPException(status_code=400, detail="Credenciales incorrectas")
+
+    # Crear token
+    payload = {
+        "sub": usuario.email,
+        "id": usuario.id,
+        "rol": usuario.rol,   # <-- NUEVO
+        "exp": datetime.utcnow() + timedelta(hours=8)
+    }
+
+    token = jwt.encode(payload, "CLAVE_SECRETA", algorithm="HS256")
 
     return {
-        "id": nuevo_usuario.id,
-        "nombre": nuevo_usuario.nombre,
-        "email": nuevo_usuario.email
+        "access_token": token,
+        "token_type": "bearer",
+        "rol": usuario.rol
     }
+
 
 # ===================================
 # GENERAR TOKEN JWT
