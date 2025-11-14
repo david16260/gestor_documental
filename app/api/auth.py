@@ -25,8 +25,10 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 router = APIRouter(tags=["Autenticación"])
 
 # ===================================
-# REGISTRO DE USUARIOS
+# REGISTRO DE USUARIOS  
 # ===================================
+
+# ESTTO SE AGREGO INCLUIR ROL EN EL LOGIN Y TOKEN JWT
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
