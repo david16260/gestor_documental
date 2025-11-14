@@ -28,6 +28,46 @@ router = APIRouter(tags=["Autenticación"])
 # REGISTRO DE USUARIOS  
 # ===================================
 
+@router.post("/register")
+def register(
+    nombre: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    user_existente = db.query(Usuario).filter(Usuario.email == email).first()
+    if user_existente:
+        raise HTTPException(status_code=400, detail="El correo ya está registrado")
+
+    nuevo_usuario = Usuario(
+        nombre=nombre,
+        email=email,
+        password_hash=hash_password(password)
+    )
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
+
+    return {
+        "id": nuevo_usuario.id,
+        "nombre": nuevo_usuario.nombre,
+        "email": nuevo_usuario.email
+    }
+
+
+# ===================================
+# GENERAR TOKEN JWT
+# ===================================
+def crear_token_jwt(data: dict, expires_delta: timedelta | None = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+# ===================================
+# LOGIN (DEVUELVE TOKEN)
+# ===================================
 # ESTTO SE AGREGO INCLUIR ROL EN EL LOGIN Y TOKEN JWT
 @router.post("/login")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
@@ -51,42 +91,6 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         "token_type": "bearer",
         "rol": usuario.rol
     }
-
-
-# ===================================
-# GENERAR TOKEN JWT
-# ===================================
-def crear_token_jwt(data: dict, expires_delta: timedelta | None = None):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
-
-# ===================================
-# LOGIN (DEVUELVE TOKEN)
-# ===================================
-@router.post("/login")
-def login(
-    form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
-):
-    usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-    if not verify_password(form_data.password, usuario.password_hash):
-        raise HTTPException(status_code=401, detail="Contraseña incorrecta")
-
-    # Crear token JWT
-    access_token = crear_token_jwt(data={"sub": str(usuario.id)})
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "usuario": usuario.nombre
-    }
-
 # ===================================
 # OBTENER USUARIO ACTUAL (Protección JWT)
 # ===================================
