@@ -8,17 +8,18 @@ class Usuario(Base):
     __tablename__ = "usuarios"
 
     id = Column(Integer, primary_key=True, index=True)
-    nombre = Column(String(100), nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    nombre = Column(String(150), nullable=False)
+    email = Column(String(200), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    rol = Column(String(50), default="usuario", nullable=False)
+
     # NUEVO CAMPO DE ROL AGREGADO
     rol = Column(String(50), default="usuario")   # admin, usuario, auditor 
     fecha_creacion = Column(DateTime, server_default=func.now())
     creado_en = Column(DateTime, server_default=func.now())
-    
-# Campos para recuperación de contraseña
-reset_token = Column(String(100), nullable=True)
-reset_token_exp = Column(DateTime, nullable=True)
+    # Campos para recuperación de contraseña
+    reset_token = Column(String(100), nullable=True)
+    reset_token_exp = Column(DateTime, nullable=True)
 
-def __repr__(self):
-    return f"<Usuario id={self.id} email={self.email} rol={self.rol}>"
+    def __repr__(self):
+        return f"<Usuario id={self.id} email={self.email} rol={self.rol}>"
