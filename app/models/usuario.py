@@ -1,5 +1,8 @@
 from sqlalchemy import Column, Integer, String, DateTime, func
+from sqlalchemy.ext.declarative import declarative_base
 from app.database import Base
+
+Base = declarative_base()
 
 class Usuario(Base):
     __tablename__ = "usuarios"
@@ -13,6 +16,9 @@ class Usuario(Base):
     fecha_creacion = Column(DateTime, server_default=func.now())
     creado_en = Column(DateTime, server_default=func.now())
     
-    # Campos para recuperación de contraseña
-    reset_token = Column(String(100), nullable=True)
-    reset_token_exp = Column(DateTime, nullable=True)
+# Campos para recuperación de contraseña
+reset_token = Column(String(100), nullable=True)
+reset_token_exp = Column(DateTime, nullable=True)
+
+def __repr__(self):
+    return f"<Usuario id={self.id} email={self.email} rol={self.rol}>"
