@@ -113,6 +113,19 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
+# ===================================
+# FUNCIÓN require_role (AQUÍ)  nuevo al codigo
+# ===================================
+def require_role(*allowed_roles):
+    def role_checker(current_user = Depends(get_current_user)):
+        if current_user.rol not in allowed_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="No tienes permisos para acceder a este recurso"
+            )
+        return current_user
+    return role_checker
+
 class ForgotPasswordRequest(BaseModel):
     email: str
 
