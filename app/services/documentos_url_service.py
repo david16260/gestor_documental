@@ -1,106 +1,80 @@
 import os
+import re
 import hashlib
-import requests
 from pathlib import Path
+
+from app.services.google_drive import (
+    download_drive_file,
+    download_drive_folder
+)
 from app.config import UPLOAD_DIR
 
 
-def normalize_google_url(url: str, desired_format="xlsx"):
-    """
-    Convierte URLs de Google Drive/Sheets/Docs en descarga directa.
-    Soporta:
-    - Google Sheets -> XLSX
-    - Google Docs -> PDF
-    - Drive /file/d/<id>/view
-    - Drive uc?id=<id>
-    """
+def extract_drive_id(url: str):
+    m = re.search(r"/d/([a-zA-Z0-9_-]+)", url)
+    if m:
+        return m.group(1), "file"
 
-    # Google Sheets o Google Docs
-    if "docs.google.com" in url:
-        if "/d/" in url:
-            file_id = url.split("/d/")[1].split("/")[0]
+    m = re.search(r"/folders/([a-zA-Z0-9_-]+)", url)
+    if m:
+        return m.group(1), "folder"
 
-            if "spreadsheets" in url:
-                return f"https://docs.google.com/spreadsheets/d/{file_id}/export?format={desired_format}"
-
-            if "document" in url:
-                return f"https://docs.google.com/document/d/{file_id}/export?format=pdf"
-
-    # Drive: https://drive.google.com/file/d/<id>/view
-    if "drive.google.com/file/d/" in url:
-        file_id = url.split("/d/")[1].split("/")[0]
-        return f"https://drive.google.com/uc?export=download&id={file_id}" 
-
-    # Drive uc?id=<id>
-    if "uc?id=" in url:
-        return url.replace("uc?id=", "uc?export=download&id=")
-
-    return url
-    
+    return None, None
 
 
-def process_external_document(url: str, usuario_id: int, version: str = "1.0"):
-    """
-    Descarga un archivo desde la URL pública, lo guarda en /uploads
-    y retorna la info necesaria para BD.
-    """
-    try:
-        # 1) Normalizar URL si es Google
-        url = normalize_google_url(url)
+def hash_file(path: Path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        h.update(f.read())
+    return h.hexdigest()
 
-        # 2) Descargar archivo
-        response = requests.get(url, timeout=10)
-        if response.status_code != 200:
-            raise Exception("No fue posible descargar el archivo (URL inválida o privada).")
 
-        # 3) Obtener nombre
-        content_disp = response.headers.get("Content-Disposition", "")
-        filename = None
+def process_external_document(url: str, usuario_id: int, version="1.0"):
+    drive_id, tipo = extract_drive_id(url)
 
-        if "filename=" in content_disp:
-            filename = content_disp.split("filename=")[-1].strip().strip('"')
-        else:
-            filename = url.split("/")[-1]
+    documentos = []
 
-        # Evitar nombres como 'export'
-        if filename.lower() in ("export", "download", ""):
-            filename += ".bin"
+    # Carpeta Drive
+    if drive_id and tipo == "folder":
+        out_dir = Path(UPLOAD_DIR) / f"user_{usuario_id}" / drive_id
+        rutas = download_drive_folder(drive_id, out_dir)
 
-        # Asegurar extensión
-        if "." not in filename:
-            guessed_ext = response.headers.get("Content-Type", "").split("/")[-1]
-            filename += f".{guessed_ext}"
+        for ruta in rutas:
+            path = Path(ruta)
+            documentos.append({
+                "nombre_archivo": path.name,
+                "extension": path.suffix.replace(".", ""),
+                "version": version,
+                "ruta_guardado": str(path),
+                "tamano_kb": round(path.stat().st_size / 1024, 2),
+                "hash_archivo": hash_file(path),
+                "usuario_id": usuario_id,
+                "content_type": None,
+                "last_modified": None,
+                "servidor": "google_drive"
+            })
 
-        extension = filename.split(".")[-1]
+        return documentos
 
-        # 4) Guardar archivo
-        storage_path = Path(UPLOAD_DIR) / filename
-        with open(storage_path, "wb") as f:
-            f.write(response.content)
+    # Archivo Drive
+    if drive_id and tipo == "file":
+        out_dir = Path(UPLOAD_DIR) / f"user_{usuario_id}"
+        out_dir.mkdir(exist_ok=True, parents=True)
 
-        # 5) Hash
-        file_hash = hashlib.sha256(response.content).hexdigest()
+        ruta = download_drive_file(drive_id, out_dir)
+        path = Path(ruta)
 
-        # 6) Metadatos extra HTTP
-        metadata_extra = {
-            "content_type": response.headers.get("Content-Type"),
-            "last_modified": response.headers.get("Last-Modified"),
-            "servidor": response.headers.get("Server")
-        }
-
-        # 7) Retorno al router
-        return {
-            "nombre_archivo": filename,
-            "extension": extension,
+        return [{
+            "nombre_archivo": path.name,
+            "extension": path.suffix.replace(".", ""),
             "version": version,
-            "ruta_guardado": str(storage_path),
-            "tamano_kb": round(len(response.content) / 1024, 2),
-            "hash_archivo": file_hash,
+            "ruta_guardado": str(path),
+            "tamano_kb": round(path.stat().st_size / 1024, 2),
+            "hash_archivo": hash_file(path),
             "usuario_id": usuario_id,
-            **metadata_extra
-        }
+            "content_type": None,
+            "last_modified": None,
+            "servidor": "google_drive"
+        }]
 
-    except requests.exceptions.RequestException:
-        raise Exception("Error al conectar con la URL (no hay acceso o requiere login).")
-    except Exception as e:
-        raise Exception(f"Error inesperado: {str(e)}")
+    raise Exception("URL no reconocida como Drive pública.")
