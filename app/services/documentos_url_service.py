@@ -29,7 +29,7 @@ def normalize_google_url(url: str, desired_format="xlsx"):
     # Drive: https://drive.google.com/file/d/<id>/view
     if "drive.google.com/file/d/" in url:
         file_id = url.split("/d/")[1].split("/")[0]
-        return f"https://drive.google.com/uc?export=download&id={file_id}"
+        return f"https://drive.google.com/uc?export=download&id={file_id}" 
 
     # Drive uc?id=<id>
     if "uc?id=" in url:

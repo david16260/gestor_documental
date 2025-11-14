@@ -27,7 +27,7 @@ def desde_url(req: URLRequest, db: Session = Depends(get_db), usuario = Depends(
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"No se pudo procesar la URL: {str(e)}")
 
-    # Verificar duplicado por hash
+    # Verificar duplicado por hash 
     hash_val = metadata.get("hash_archivo")
     if not hash_val:
         raise HTTPException(status_code=500, detail="No se pudo calcular el hash del archivo")
