@@ -1,0 +1,48 @@
+# Framework
+fastapi
+uvicorn[standard]
+
+# Base de datos y ORM
+sqlalchemy
+psycopg2-binary
+alembic
+
+# Validación y utilidades
+pydantic
+python-decouple
+python-multipart
+lxml
+jsonschema
+
+# Procesamiento de lenguaje natural y ML
+spacy
+scikit-learn
+keybert
+sentence-transformers
+
+# Archivos PDF, Word y Excel
+PyPDF2
+python-docx
+openpyxl
+
+# Detección tipo de archivo
+python-magic-bin  # en Windows se usa python-magic-bin
+
+# Seguridad / Hashing
+passlib[bcrypt]
+python-jose  # para JWT
+
+# Google API
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+
+# Testing
+pytest
+httpx  # para tests de FastAPI
+
+# Otros
+streamlit
+requests
+Jinja2

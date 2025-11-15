@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Registro | Gestor Documental</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f2f2f2;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            width: 320px;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        input {
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .link {
+            text-align: center;
+            margin-top: 15px;
+        }
+        .link a {
+            text-decoration: none;
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>Crear cuenta</h2>
+        <form id="registerForm">
+            <input type="text" name="nombre" placeholder="Nombre completo" required>
+            <input type="email" name="email" placeholder="Correo electrónico" required>
+            <input type="password" name="password" placeholder="Contraseña" required>
+            <button type="submit">Registrarse</button>
+        </form>
+
+        <div class="link">
+            ¿Ya tienes cuenta? <a href="/">Inicia sesión</a>
+        </div>
+
+        <p id="mensaje" style="text-align:center; color:red; margin-top:10px;"></p>
+    </div>
+
+    <script>
+        const form = document.getElementById("registerForm");
+        const mensaje = document.getElementById("mensaje");
+
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch("/auth/register", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    alert("✅ Usuario registrado correctamente");
+                    window.location.href = "/";
+                } else {
+                    const error = await res.json();
+                    mensaje.textContent = error.detail || "Error al registrarse";
+                }
+            } catch (err) {
+                mensaje.textContent = "Error de conexión con el servidor";
+            }
+        });
+    </script>
+</body>
+</html>

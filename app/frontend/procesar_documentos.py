@@ -1,0 +1,602 @@
+# procesar_documentos.py
+import streamlit as st
+import requests
+import time
+from io import BytesIO
+
+API_BASE = "http://127.0.0.1:8000"
+
+def procesar_documentos_page(cambiar_vista):
+    """Pantalla para procesar documentos con diferentes servicios."""
+    
+    # --- Validar sesión ---
+    if "token" not in st.session_state or not st.session_state.token:
+        st.warning("🔒 No has iniciado sesión.")
+        cambiar_vista("login")
+        st.stop()
+
+    usuario = st.session_state.get("usuario_nombre", "Desconocido")
+
+    # --- Estilos visuales ---
+    st.markdown("""
+    <style>
+        .stApp {
+    background: linear-gradient(180deg, #e8f5e9 0%, #c8e6c9 50%, #a5d6a7 100%);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    color: #000000 !important;
+}
+p, h1, h2, h3, h4, h5, h6, div, span {
+    color: #000000 !important;
+}
+div[data-testid="stButton"] > button {
+    background: linear-gradient(135deg, #81db85 0%, #69bc6c 100%) !important;
+    color: white !important;
+    border: none !important;
+}
+
+div[data-testid="stButton"] > button:hover {
+    background: linear-gradient(135deg, #81db85 0%, #69bc6c 100%) !important;
+    color: white !important;
+    border: none !important;
+}
+
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: linear-gradient(135deg, #2e7d32, #388e3c);
+            color: white;
+            padding: 14px 30px;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 16px;
+        }
+
+        .container {
+            background: #ffffff;
+            padding: 35px;
+            border-radius: 16px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            margin-top: 140px;
+            max-width: 900px;
+            border: 1px solid #c8e6c9;
+            margin-left: auto;
+            margin-right: auto;
+            transition: all 0.4s ease-in-out;
+        }
+
+        .service-card {
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .service-card:hover {
+            border-color: #2e7d32;
+            background-color: #f8f9fa;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .service-card.selected {
+            border-color: #2e7d32;
+            background-color: #e8f5e9;
+        }
+
+        .service-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .upload-area {
+            border: 3px dashed #4caf50;
+            border-radius: 15px;
+            padding: 2rem;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .upload-area:hover {
+            background: #e8f5e9;
+            border-color: #2e7d32;
+        }
+
+        .upload-area.dragover {
+            background: #c8e6c9;
+            border-color: #1b5e20;
+        }
+
+        .file-info {
+            background: #f1f8e9;
+            border: 2px solid #81c784;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .progress-container {
+            margin: 20px 0;
+        }
+
+        .result-success {
+            background: #e8f5e9;
+            border: 2px solid #4caf50;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .result-error {
+            background: #ffebee;
+            border: 2px solid #f44336;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    # --- HEADER ---
+    st.markdown(f"""
+    <div class="header">
+        <div>👤 {usuario} | Procesar Documentos</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("<div style='height:120px'></div>", unsafe_allow_html=True)
+
+    # --- CONTENIDO PRINCIPAL ---
+    st.markdown('<div class="container">', unsafe_allow_html=True)
+    st.title("📁 Gestor Documental - Procesar Documentos")
+
+    # Inicializar estado de sesión para esta página
+    if "selected_service" not in st.session_state:
+        st.session_state.selected_service = None
+    if "selected_file" not in st.session_state:
+        st.session_state.selected_file = None
+    if "upload_progress" not in st.session_state:
+        st.session_state.upload_progress = 0
+
+    # --- SELECCIÓN DE SERVICIO ---
+    st.markdown("### 🔧 Selecciona el tipo de procesamiento:")
+
+    # Crear columnas para las tarjetas de servicio
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        # Servicio: Subida local
+        is_selected = st.session_state.selected_service == "upload"
+        card_class = "service-card selected" if is_selected else "service-card"
+        st.markdown(f"""
+        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
+            <div class="service-icon">📤</div>
+            <h6>Subir Archivo Local</h6>
+            <p class="text-muted small">
+                <strong>Desde tu computadora</strong><br>
+                • PDF, DOCX, TXT<br>
+                • Hasta 10MB<br>
+                • Procesamiento inmediato
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Seleccionar Subida Local", key="btn_upload", use_container_width=True):
+            st.session_state.selected_service = "upload"
+            st.rerun()
+
+    with col2:
+        # Servicio: FUID - Clasificación con IA
+        is_selected = st.session_state.selected_service == "fuid"
+        card_class = "service-card selected" if is_selected else "service-card"
+        st.markdown(f"""
+        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
+            <div class="service-icon">📁</div>
+            <h6>Clasificación FUID con IA</h6>
+            <p class="text-muted small">
+                <strong>Para carpetas completas</strong><br>
+                • Clasifica automáticamente con IA<br>
+                • Organiza en estructura documental<br>
+                • Genera metadatos FUID completos
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Seleccionar FUID", key="btn_fuid", use_container_width=True):
+            st.session_state.selected_service = "fuid"
+            st.rerun()
+
+    with col3:
+        # Servicio: URL Individual
+        is_selected = st.session_state.selected_service == "individual"
+        card_class = "service-card selected" if is_selected else "service-card"
+        st.markdown(f"""
+        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
+            <div class="service-icon">🌐</div>
+            <h6>URL Individual</h6>
+            <p class="text-muted small">
+                <strong>Desde Google Drive</strong><br>
+                • Archivos individuales<br>
+                • URLs de Google Drive<br>
+                • Procesamiento básico
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
+        if st.button("Seleccionar URL", key="btn_individual", use_container_width=True):
+            st.session_state.selected_service = "individual"
+            st.rerun()
+
+    # --- SECCIÓN DE SUBIDA LOCAL ---
+    if st.session_state.selected_service == "upload":
+        st.markdown("---")
+        st.markdown("### 📤 Subir Archivo Local")
+        
+        # Área de subida
+        st.markdown("""
+        <div class="upload-area">
+            <div class="service-icon">📤</div>
+            <h4>Arrastra y suelta tu archivo aquí</h4>
+            <p class="text-muted">o haz clic para seleccionar archivos</p>
+            <p class="text-muted small">Soporta: PDF, DOCX, TXT (Máx. 10MB)</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Uploader de archivo
+        uploaded_file = st.file_uploader(
+            "Selecciona un archivo",
+            type=["pdf", "docx", "txt"],
+            label_visibility="collapsed",
+            key="file_uploader"
+        )
+        
+        if uploaded_file:
+            st.session_state.selected_file = uploaded_file
+            # Mostrar información del archivo
+            file_size_mb = uploaded_file.size / (1024 * 1024)
+            st.markdown(f"""
+            <div class="file-info">
+                <strong>Archivo seleccionado:</strong> {uploaded_file.name}<br>
+                <strong>Tamaño:</strong> {file_size_mb:.2f} MB<br>
+                <strong>Tipo:</strong> {uploaded_file.type or 'No especificado'}
+            </div>
+            """, unsafe_allow_html=True)
+        
+        # Versión
+        version_upload = st.text_input("🔢 Versión", "1.0", key="version_upload")
+        
+        # Botón de subida
+        if st.button("📤 Subir Archivo", use_container_width=True, 
+                    disabled=not uploaded_file, key="btn_upload_file"):
+            upload_local_file(uploaded_file, version_upload)
+
+    # --- SECCIÓN DE SERVICIOS POR URL ---
+    elif st.session_state.selected_service in ["fuid", "individual"]:
+        st.markdown("---")
+        
+        if st.session_state.selected_service == "fuid":
+            st.markdown("### 📁 Clasificación FUID con IA")
+            # Información FUID
+            st.info("""
+            **🔍 Procesamiento FUID con IA:**
+            - Analizará el contenido con comprensión contextual
+            - Clasificará automáticamente por área/serie/subsérie
+            - Organizará en carpetas estructuradas
+            - Generará metadatos completos de clasificación
+            """)
+        else:
+            st.markdown("### 🌐 URL Individual")
+            # Información Individual
+            st.warning("""
+            **🌐 Procesamiento Individual:**
+            - Procesamiento rápido desde URL
+            - Metadatos básicos del documento
+            - Ideal para archivos individuales
+            """)
+        
+        # Formulario URL
+        url = st.text_input(
+            "📎 URL del documento o carpeta",
+            placeholder="https://drive.google.com/drive/folders/... o https://drive.google.com/file/d/...",
+            key="url_input"
+        )
+        
+        version = st.text_input("🔢 Versión", "1.0", key="version_url")
+        
+        # Botón de procesamiento
+        button_text = "📁 Procesar con Clasificación FUID" if st.session_state.selected_service == "fuid" else "🌐 Procesar URL Individual"
+        
+        if st.button(button_text, use_container_width=True, disabled=not url, key="btn_process_url"):
+            process_url_service(url, version, st.session_state.selected_service)
+
+    # --- BOTÓN DE VOLVER ---
+    st.markdown("---")
+    if st.button("⬅ Volver al Dashboard", use_container_width=True):
+        cambiar_vista("dashboard")
+
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+def upload_local_file(uploaded_file, version):
+    """Función para subir archivo local."""
+    try:
+        # Mostrar progreso
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Preparar datos
+        status_text.text("Preparando archivo...")
+        progress_bar.progress(10)
+        
+        # Subir archivo
+        status_text.text("Subiendo archivo...")
+        progress_bar.progress(30)
+        
+        headers = {"Authorization": f"Bearer {st.session_state.token}"}
+        files = {"file": (uploaded_file.name, uploaded_file.getvalue())}
+        data = {"version": version, "categoria": "general"}
+        
+        resp = requests.post(f"{API_BASE}/documentos/upload", files=files, data=data, headers=headers)
+        
+        status_text.text("Procesando...")
+        progress_bar.progress(90)
+        
+        if resp.ok:
+            data = resp.json()
+            progress_bar.progress(100)
+            status_text.text("Completado")
+            
+            # Mostrar resultado exitoso
+            st.markdown(f"""
+            <div class="result-success">
+                <h5>✅ Archivo Subido Exitosamente</h5>
+                <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
+                <strong>ID:</strong> {data.get('documento_id', 'N/A')}<br>
+                <strong>Nombre:</strong> {data.get('nombre_archivo', 'N/A')}<br>
+                <strong>Tamaño:</strong> {data.get('tamano_kb', 'N/A')} KB<br>
+                <strong>Hash MD5:</strong> <code>{data.get('hash_md5', 'N/A')}</code><br>
+                <strong>Versión:</strong> {data.get('version', 'N/A')}
+            </div>
+            """, unsafe_allow_html=True)
+            
+        else:
+            error_data = resp.json()
+            st.markdown(f"""
+            <div class="result-error">
+                <h5>⚠️ Error en el Procesamiento</h5>
+                <strong>Detalle:</strong> {error_data.get('detail', error_data.get('error', 'Error desconocido'))}<br>
+                <strong>Sugerencia:</strong> Verifica que el archivo sea válido y vuelve a intentar.
+            </div>
+            """, unsafe_allow_html=True)
+            
+    except Exception as e:
+        st.markdown(f"""
+        <div class="result-error">
+            <h5>⚠️ Error de Conexión</h5>
+            <strong>Detalle:</strong> {str(e)}<br>
+            <strong>Sugerencia:</strong> Verifica tu conexión a internet y vuelve a intentar.
+        </div>
+        """, unsafe_allow_html=True)
+    finally:
+        # Limpiar después de 2 segundos
+        time.sleep(2)
+        progress_bar.empty()
+        status_text.empty()
+
+
+def process_url_service(url, version, service_type):
+    """Función para procesar servicios por URL - VERSIÓN CORREGIDA"""
+    try:
+        # Mostrar progreso
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        # Iniciar procesamiento
+        progress_text = "Clasificando con IA contextual..." if service_type == "fuid" else "Procesando documento individual..."
+        status_text.text("Iniciando procesamiento...")
+        progress_bar.progress(10)
+        
+        status_text.text(progress_text)
+        progress_bar.progress(30)
+        
+        # Determinar endpoint y cuerpo
+        if service_type == "fuid":
+            endpoint = f"{API_BASE}/fuid/procesar-url"
+        else:
+            endpoint = f"{API_BASE}/documentos/desde-url"
+        
+        headers = {
+            "Authorization": f"Bearer {st.session_state.token}",
+            "Content-Type": "application/json"
+        }
+        request_body = {"url": url, "version": version}
+        
+        # TIMEOUT AUMENTADO A 10 MINUTOS
+        resp = requests.post(endpoint, json=request_body, headers=headers, timeout=600)
+        
+        status_text.text("Finalizando...")
+        progress_bar.progress(90)
+        
+        if resp.ok:
+            data = resp.json()
+            progress_bar.progress(100)
+            status_text.text("Completado")
+            
+            # DEBUG OPCIONAL: Mostrar datos recibidos (COMENTADO PARA PRODUCCIÓN)
+            # st.markdown("""
+            # <div style="color: white; background-color: transparent; padding: 10px;">
+            #     <strong>🔍 Datos recibidos del backend:</strong>
+            # </div>
+            # """, unsafe_allow_html=True)
+            # st.json(data)
+            
+            # Mostrar resultado según el tipo de servicio
+            if service_type == "fuid":
+                display_fuid_result(data)
+            else:
+                display_individual_result(data)
+                
+        else:
+            error_data = resp.json()
+            st.markdown(f"""
+            <div class="result-error">
+                <h5>⚠️ Error en el Procesamiento</h5>
+                <strong>Status Code:</strong> {resp.status_code}<br>
+                <strong>Detalle:</strong> {error_data.get('detail', error_data.get('error', 'Error desconocido'))}<br>
+                <strong>Sugerencia:</strong> Verifica que la URL sea accesible públicamente y vuelve a intentar.
+            </div>
+            """, unsafe_allow_html=True)
+            
+    except requests.exceptions.Timeout:
+        st.markdown(f"""
+        <div class="result-error">
+            <h5>⏰ Timeout del Servidor</h5>
+            <strong>Detalle:</strong> El servidor tardó demasiado en responder<br>
+            <strong>Sugerencia:</strong> Intenta con menos documentos o más tarde.
+        </div>
+        """, unsafe_allow_html=True)
+    except requests.exceptions.ConnectionError:
+        st.markdown(f"""
+        <div class="result-error">
+            <h5>🔌 Error de Conexión</h5>
+            <strong>Detalle:</strong> No se pudo conectar con el servidor<br>
+            <strong>Sugerencia:</strong> Verifica que el servidor esté ejecutándose en {API_BASE}
+        </div>
+        """, unsafe_allow_html=True)
+    except Exception as e:
+        st.markdown(f"""
+        <div class="result-error">
+            <h5>⚠️ Error Inesperado</h5>
+            <strong>Detalle:</strong> {str(e)}<br>
+            <strong>Sugerencia:</strong> Verifica tu conexión a internet y vuelve a intentar.
+        </div>
+        """, unsafe_allow_html=True)
+    finally:
+        # Limpiar después de 2 segundos
+        time.sleep(2)
+        progress_bar.empty()
+        status_text.empty()
+
+
+def display_fuid_result(data):
+    """Mostrar resultado del procesamiento FUID - VERSIÓN CON COLORES CORREGIDOS"""
+    
+    # CSS adicional para corregir colores
+    st.markdown("""
+    <style>
+        .expediente-card {
+            border: 1px solid #81c784; 
+            padding: 15px; 
+            margin-bottom: 15px; 
+            border-radius: 8px; 
+            background-color: #1e1e1e !important;
+            color: white !important;
+        }
+        .expediente-card strong {
+            color: #81c784 !important;
+        }
+        .resultado-card {
+            border: 1px solid #bbdefb; 
+            padding: 12px; 
+            margin-bottom: 10px; 
+            border-radius: 6px; 
+            background-color: #2d2d2d !important;
+            color: white !important;
+        }
+        .resultado-card strong {
+            color: #bbdefb !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    
+    # Mostrar información básica primero
+    st.markdown(f"""
+    <div class="result-success">
+        <h5>✅ Procesamiento FUID Completado</h5>
+        <strong>Estado:</strong> {data.get('estado', 'N/A')}<br>
+        <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
+        <strong>Documentos procesados:</strong> {data.get('procesados', 0)}<br>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # MOSTRAR EXPEDIENTES
+    expedientes_creados = data.get('expedientes_creados', [])
+    
+    if expedientes_creados and len(expedientes_creados) > 0:
+        st.markdown("---")
+        st.subheader("📂 Expedientes Creados:")
+        
+        for expediente in expedientes_creados:
+            # Asegurarse de que todos los valores son strings
+            fuid = str(expediente.get('fuid', 'N/A'))
+            codigo = str(expediente.get('codigo', 'N/A'))
+            documentos = str(expediente.get('documentos', 'N/A'))
+            unidad_documental = str(expediente.get('unidad_documental', 'N/A'))
+            
+            st.markdown(f"""
+            <div class="expediente-card">
+                <strong>🆔 FUID:</strong> {fuid}<br>
+                <strong>📋 Código:</strong> {codigo}<br>
+                <strong>📄 Documentos:</strong> {documentos}<br>
+                <strong>🏢 Unidad Documental:</strong> {unidad_documental}
+            </div>
+            """, unsafe_allow_html=True)
+    
+    # Mostrar resultados detallados si existen
+    resultados = data.get('resultados', [])
+    if resultados and len(resultados) > 0:
+        st.markdown("---")
+        st.subheader("📊 Resultados Detallados:")
+        
+        for i, resultado in enumerate(resultados):
+            documento = str(resultado.get('documento', 'N/A'))
+            clasificacion = str(resultado.get('clasificacion', 'N/A'))
+            unidad_documental = str(resultado.get('unidad_documental', 'N/A'))
+            confianza = str(resultado.get('confianza', 'N/A'))
+            ruta_final = str(resultado.get('ruta_final', 'N/A'))
+            
+            st.markdown(f"""
+            <div class="resultado-card">
+                <strong>📄 Documento {i+1}:</strong> {documento}<br>
+                <strong>🏷️ Clasificación:</strong> {clasificacion}<br>
+                <strong>🏢 Unidad:</strong> {unidad_documental}<br>
+                <strong>🎯 Confianza:</strong> {confianza}<br>
+                <strong>📁 Ruta:</strong> <small>{ruta_final}</small>
+            </div>
+            """, unsafe_allow_html=True)
+
+
+def display_individual_result(data):
+    """Mostrar resultado del procesamiento individual."""
+    documentos_html = ""
+    if data.get('documentos') and len(data['documentos']) > 0:
+        documentos_html = "<hr><h6>📄 Documentos:</h6>"
+        for doc in data['documentos']:
+            documentos_html += f"""
+            <div style="border: 1px solid #81c784; padding: 8px; margin-bottom: 8px; border-radius: 6px; font-size: 14px;">
+                <strong>{doc.get('nombre', 'N/A')}</strong><br>
+                <strong>ID:</strong> {doc.get('id', 'N/A')}<br>
+                <strong>Extensión:</strong> {doc.get('extension', 'N/A')}<br>
+                <strong>Tamaño:</strong> {doc.get('tamano_kb', 'N/A')} KB
+            </div>
+            """
+    
+    st.markdown(f"""
+    <div class="result-success">
+        <h5>✅ Documento Procesado desde URL</h5>
+        <strong>Estado:</strong> {data.get('status', 'N/A')}<br>
+        <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
+        <strong>Documentos registrados:</strong> {len(data.get('documentos', []))}
+        {documentos_html}
+    </div>
+    """, unsafe_allow_html=True)
