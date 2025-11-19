@@ -172,74 +172,26 @@ div[data-testid="stButton"] > button:hover {
         st.session_state.upload_progress = 0
 
     # --- SELECCIÓN DE SERVICIO ---
-    st.markdown("### 🔧 Selecciona el tipo de procesamiento:")
+    st.markdown("### 🔍 Procesamiento FUID con IA:")
 
-    # Crear columnas para las tarjetas de servicio
-    col1, col2 = st.columns(2)
 
+    col1, = st.columns(1)
     with col1:
         # Servicio: FUID - Clasificación con IA
         is_selected = st.session_state.selected_service == "fuid"
-        card_class = "service-card selected" if is_selected else "service-card"
-        st.markdown(f"""
-        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
-            <div class="service-icon">📁</div>
-            <h6>Clasificación FUID con IA</h6>
-            <p class="text-muted small">
-                <strong>Para carpetas completas</strong><br>
-                • Clasifica automáticamente con IA<br>
-                • Organiza en estructura documental<br>
-                • Genera metadatos FUID completos
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Seleccionar FUID", key="btn_fuid", use_container_width=True):
-            st.session_state.selected_service = "fuid"
-            st.rerun()
+        
 
-    with col2:
-        # Servicio: URL Individual
-        is_selected = st.session_state.selected_service == "individual"
-        card_class = "service-card selected" if is_selected else "service-card"
-        st.markdown(f"""
-        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
-            <div class="service-icon">🌐</div>
-            <h6>URL Individual</h6>
-            <p class="text-muted small">
-                <strong>Desde Google Drive</strong><br>
-                • Archivos individuales<br>
-                • URLs de Google Drive<br>
-                • Procesamiento básico
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Seleccionar URL", key="btn_individual", use_container_width=True):
-            st.session_state.selected_service = "individual"
-            st.rerun()
-
-    # --- SECCIÓN DE SERVICIOS POR URL ---
-    if st.session_state.selected_service in ["fuid", "individual"]:
+    # --- SECCIÓN DE SERVICIOS FUID ---
+    if st.session_state.selected_service == "fuid":
         st.markdown("---")
         
-        if st.session_state.selected_service == "fuid":
-            st.markdown("### 📁 Clasificación FUID con IA")
-            # Información FUID
-            st.info("""
-            **🔍 Procesamiento FUID con IA:**
-            - Analizará el contenido con comprensión contextual
-            - Clasificará automáticamente por área/serie/subsérie
-            - Organizará en carpetas estructuradas
-            - Generará metadatos completos de clasificación
-            """)
-        else:
-            st.markdown("### 🌐 URL Individual")
-            # Información Individual
-            st.warning("""
-            **🌐 Procesamiento Individual:**
-            - Procesamiento rápido desde URL
-            - Metadatos básicos del documento
-            - Ideal para archivos individuales
-            """)
+        # Información FUID
+        st.info("""
+        - Analizará el contenido con comprensión contextual
+        - Clasificará automáticamente por área/serie/subsérie
+        - Organizará en carpetas estructuradas
+        - Generará metadatos completos de clasificación
+        """)
         
         # Formulario URL
         url = st.text_input(
@@ -251,10 +203,10 @@ div[data-testid="stButton"] > button:hover {
         version = st.text_input("🔢 Versión", "1.0", key="version_url")
         
         # Botón de procesamiento
-        button_text = "📁 Procesar con Clasificación FUID" if st.session_state.selected_service == "fuid" else "🌐 Procesar URL Individual"
+        button_text = "📁 Procesar con Clasificación FUID"
         
         if st.button(button_text, use_container_width=True, disabled=not url, key="btn_process_url"):
-            process_url_service(url, version, st.session_state.selected_service)
+            process_url_service(url, version, "fuid")
 
     # --- BOTÓN DE VOLVER ---
     st.markdown("---")
@@ -272,7 +224,7 @@ def process_url_service(url, version, service_type):
         status_text = st.empty()
         
         # Iniciar procesamiento
-        progress_text = "Clasificando con IA contextual..." if service_type == "fuid" else "Procesando documento individual..."
+        progress_text = "Clasificando con IA contextual..."
         status_text.text("Iniciando procesamiento...")
         progress_bar.progress(10)
         
@@ -280,10 +232,7 @@ def process_url_service(url, version, service_type):
         progress_bar.progress(30)
         
         # Determinar endpoint y cuerpo
-        if service_type == "fuid":
-            endpoint = f"{API_BASE}/fuid/procesar-url"
-        else:
-            endpoint = f"{API_BASE}/documentos/desde-url"
+        endpoint = f"{API_BASE}/fuid/procesar-url"
         
         headers = {
             "Authorization": f"Bearer {st.session_state.token}",
@@ -302,19 +251,8 @@ def process_url_service(url, version, service_type):
             progress_bar.progress(100)
             status_text.text("Completado")
             
-            # DEBUG OPCIONAL: Mostrar datos recibidos (COMENTADO PARA PRODUCCIÓN)
-            # st.markdown("""
-            # <div style="color: white; background-color: transparent; padding: 10px;">
-            #     <strong>🔍 Datos recibidos del backend:</strong>
-            # </div>
-            # """, unsafe_allow_html=True)
-            # st.json(data)
-            
-            # Mostrar resultado según el tipo de servicio
-            if service_type == "fuid":
-                display_fuid_result(data)
-            else:
-                display_individual_result(data)
+            # Mostrar resultado FUID
+            display_fuid_result(data)
                 
         else:
             error_data = resp.json()
@@ -444,29 +382,3 @@ def display_fuid_result(data):
                 <strong>📁 Ruta:</strong> <small>{ruta_final}</small>
             </div>
             """, unsafe_allow_html=True)
-
-
-def display_individual_result(data):
-    """Mostrar resultado del procesamiento individual."""
-    documentos_html = ""
-    if data.get('documentos') and len(data['documentos']) > 0:
-        documentos_html = "<hr><h6>📄 Documentos:</h6>"
-        for doc in data['documentos']:
-            documentos_html += f"""
-            <div style="border: 1px solid #81c784; padding: 8px; margin-bottom: 8px; border-radius: 6px; font-size: 14px;">
-                <strong>{doc.get('nombre', 'N/A')}</strong><br>
-                <strong>ID:</strong> {doc.get('id', 'N/A')}<br>
-                <strong>Extensión:</strong> {doc.get('extension', 'N/A')}<br>
-                <strong>Tamaño:</strong> {doc.get('tamano_kb', 'N/A')} KB
-            </div>
-            """
-    
-    st.markdown(f"""
-    <div class="result-success">
-        <h5>✅ Documento Procesado desde URL</h5>
-        <strong>Estado:</strong> {data.get('status', 'N/A')}<br>
-        <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
-        <strong>Documentos registrados:</strong> {len(data.get('documentos', []))}
-        {documentos_html}
-    </div>
-    """, unsafe_allow_html=True)
