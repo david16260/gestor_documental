@@ -1,4 +1,4 @@
-# procesar_documentos.py
+# app/frontend/procesar_documentos.py
 import streamlit as st
 import requests
 import time
@@ -172,137 +172,26 @@ div[data-testid="stButton"] > button:hover {
         st.session_state.upload_progress = 0
 
     # --- SELECCIÓN DE SERVICIO ---
-    st.markdown("### 🔧 Selecciona el tipo de procesamiento:")
+    st.markdown("### 🔍 Procesamiento FUID con IA:")
 
-    # Crear columnas para las tarjetas de servicio
-    col1, col2, col3 = st.columns(3)
 
+    col1, = st.columns(1)
     with col1:
-        # Servicio: Subida local
-        is_selected = st.session_state.selected_service == "upload"
-        card_class = "service-card selected" if is_selected else "service-card"
-        st.markdown(f"""
-        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
-            <div class="service-icon">📤</div>
-            <h6>Subir Archivo Local</h6>
-            <p class="text-muted small">
-                <strong>Desde tu computadora</strong><br>
-                • PDF, DOCX, TXT<br>
-                • Hasta 10MB<br>
-                • Procesamiento inmediato
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Seleccionar Subida Local", key="btn_upload", use_container_width=True):
-            st.session_state.selected_service = "upload"
-            st.rerun()
-
-    with col2:
         # Servicio: FUID - Clasificación con IA
         is_selected = st.session_state.selected_service == "fuid"
-        card_class = "service-card selected" if is_selected else "service-card"
-        st.markdown(f"""
-        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
-            <div class="service-icon">📁</div>
-            <h6>Clasificación FUID con IA</h6>
-            <p class="text-muted small">
-                <strong>Para carpetas completas</strong><br>
-                • Clasifica automáticamente con IA<br>
-                • Organiza en estructura documental<br>
-                • Genera metadatos FUID completos
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Seleccionar FUID", key="btn_fuid", use_container_width=True):
-            st.session_state.selected_service = "fuid"
-            st.rerun()
+        
 
-    with col3:
-        # Servicio: URL Individual
-        is_selected = st.session_state.selected_service == "individual"
-        card_class = "service-card selected" if is_selected else "service-card"
-        st.markdown(f"""
-        <div class="{card_class}" onclick="this.parentElement.querySelector('button').click()">
-            <div class="service-icon">🌐</div>
-            <h6>URL Individual</h6>
-            <p class="text-muted small">
-                <strong>Desde Google Drive</strong><br>
-                • Archivos individuales<br>
-                • URLs de Google Drive<br>
-                • Procesamiento básico
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        if st.button("Seleccionar URL", key="btn_individual", use_container_width=True):
-            st.session_state.selected_service = "individual"
-            st.rerun()
-
-    # --- SECCIÓN DE SUBIDA LOCAL ---
-    if st.session_state.selected_service == "upload":
-        st.markdown("---")
-        st.markdown("### 📤 Subir Archivo Local")
-        
-        # Área de subida
-        st.markdown("""
-        <div class="upload-area">
-            <div class="service-icon">📤</div>
-            <h4>Arrastra y suelta tu archivo aquí</h4>
-            <p class="text-muted">o haz clic para seleccionar archivos</p>
-            <p class="text-muted small">Soporta: PDF, DOCX, TXT (Máx. 10MB)</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Uploader de archivo
-        uploaded_file = st.file_uploader(
-            "Selecciona un archivo",
-            type=["pdf", "docx", "txt"],
-            label_visibility="collapsed",
-            key="file_uploader"
-        )
-        
-        if uploaded_file:
-            st.session_state.selected_file = uploaded_file
-            # Mostrar información del archivo
-            file_size_mb = uploaded_file.size / (1024 * 1024)
-            st.markdown(f"""
-            <div class="file-info">
-                <strong>Archivo seleccionado:</strong> {uploaded_file.name}<br>
-                <strong>Tamaño:</strong> {file_size_mb:.2f} MB<br>
-                <strong>Tipo:</strong> {uploaded_file.type or 'No especificado'}
-            </div>
-            """, unsafe_allow_html=True)
-        
-        # Versión
-        version_upload = st.text_input("🔢 Versión", "1.0", key="version_upload")
-        
-        # Botón de subida
-        if st.button("📤 Subir Archivo", use_container_width=True, 
-                    disabled=not uploaded_file, key="btn_upload_file"):
-            upload_local_file(uploaded_file, version_upload)
-
-    # --- SECCIÓN DE SERVICIOS POR URL ---
-    elif st.session_state.selected_service in ["fuid", "individual"]:
+    # --- SECCIÓN DE SERVICIOS FUID ---
+    if st.session_state.selected_service == "fuid":
         st.markdown("---")
         
-        if st.session_state.selected_service == "fuid":
-            st.markdown("### 📁 Clasificación FUID con IA")
-            # Información FUID
-            st.info("""
-            **🔍 Procesamiento FUID con IA:**
-            - Analizará el contenido con comprensión contextual
-            - Clasificará automáticamente por área/serie/subsérie
-            - Organizará en carpetas estructuradas
-            - Generará metadatos completos de clasificación
-            """)
-        else:
-            st.markdown("### 🌐 URL Individual")
-            # Información Individual
-            st.warning("""
-            **🌐 Procesamiento Individual:**
-            - Procesamiento rápido desde URL
-            - Metadatos básicos del documento
-            - Ideal para archivos individuales
-            """)
+        # Información FUID
+        st.info("""
+        - Analizará el contenido con comprensión contextual
+        - Clasificará automáticamente por área/serie/subsérie
+        - Organizará en carpetas estructuradas
+        - Generará metadatos completos de clasificación
+        """)
         
         # Formulario URL
         url = st.text_input(
@@ -314,10 +203,10 @@ div[data-testid="stButton"] > button:hover {
         version = st.text_input("🔢 Versión", "1.0", key="version_url")
         
         # Botón de procesamiento
-        button_text = "📁 Procesar con Clasificación FUID" if st.session_state.selected_service == "fuid" else "🌐 Procesar URL Individual"
+        button_text = "📁 Procesar con Clasificación FUID"
         
         if st.button(button_text, use_container_width=True, disabled=not url, key="btn_process_url"):
-            process_url_service(url, version, st.session_state.selected_service)
+            process_url_service(url, version, "fuid")
 
     # --- BOTÓN DE VOLVER ---
     st.markdown("---")
@@ -325,73 +214,6 @@ div[data-testid="stButton"] > button:hover {
         cambiar_vista("dashboard")
 
     st.markdown('</div>', unsafe_allow_html=True)
-
-
-def upload_local_file(uploaded_file, version):
-    """Función para subir archivo local."""
-    try:
-        # Mostrar progreso
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        # Preparar datos
-        status_text.text("Preparando archivo...")
-        progress_bar.progress(10)
-        
-        # Subir archivo
-        status_text.text("Subiendo archivo...")
-        progress_bar.progress(30)
-        
-        headers = {"Authorization": f"Bearer {st.session_state.token}"}
-        files = {"file": (uploaded_file.name, uploaded_file.getvalue())}
-        data = {"version": version, "categoria": "general"}
-        
-        resp = requests.post(f"{API_BASE}/documentos/upload", files=files, data=data, headers=headers)
-        
-        status_text.text("Procesando...")
-        progress_bar.progress(90)
-        
-        if resp.ok:
-            data = resp.json()
-            progress_bar.progress(100)
-            status_text.text("Completado")
-            
-            # Mostrar resultado exitoso
-            st.markdown(f"""
-            <div class="result-success">
-                <h5>✅ Archivo Subido Exitosamente</h5>
-                <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
-                <strong>ID:</strong> {data.get('documento_id', 'N/A')}<br>
-                <strong>Nombre:</strong> {data.get('nombre_archivo', 'N/A')}<br>
-                <strong>Tamaño:</strong> {data.get('tamano_kb', 'N/A')} KB<br>
-                <strong>Hash MD5:</strong> <code>{data.get('hash_md5', 'N/A')}</code><br>
-                <strong>Versión:</strong> {data.get('version', 'N/A')}
-            </div>
-            """, unsafe_allow_html=True)
-            
-        else:
-            error_data = resp.json()
-            st.markdown(f"""
-            <div class="result-error">
-                <h5>⚠️ Error en el Procesamiento</h5>
-                <strong>Detalle:</strong> {error_data.get('detail', error_data.get('error', 'Error desconocido'))}<br>
-                <strong>Sugerencia:</strong> Verifica que el archivo sea válido y vuelve a intentar.
-            </div>
-            """, unsafe_allow_html=True)
-            
-    except Exception as e:
-        st.markdown(f"""
-        <div class="result-error">
-            <h5>⚠️ Error de Conexión</h5>
-            <strong>Detalle:</strong> {str(e)}<br>
-            <strong>Sugerencia:</strong> Verifica tu conexión a internet y vuelve a intentar.
-        </div>
-        """, unsafe_allow_html=True)
-    finally:
-        # Limpiar después de 2 segundos
-        time.sleep(2)
-        progress_bar.empty()
-        status_text.empty()
 
 
 def process_url_service(url, version, service_type):
@@ -402,7 +224,7 @@ def process_url_service(url, version, service_type):
         status_text = st.empty()
         
         # Iniciar procesamiento
-        progress_text = "Clasificando con IA contextual..." if service_type == "fuid" else "Procesando documento individual..."
+        progress_text = "Clasificando con IA contextual..."
         status_text.text("Iniciando procesamiento...")
         progress_bar.progress(10)
         
@@ -410,10 +232,7 @@ def process_url_service(url, version, service_type):
         progress_bar.progress(30)
         
         # Determinar endpoint y cuerpo
-        if service_type == "fuid":
-            endpoint = f"{API_BASE}/fuid/procesar-url"
-        else:
-            endpoint = f"{API_BASE}/documentos/desde-url"
+        endpoint = f"{API_BASE}/fuid/procesar-url"
         
         headers = {
             "Authorization": f"Bearer {st.session_state.token}",
@@ -432,19 +251,8 @@ def process_url_service(url, version, service_type):
             progress_bar.progress(100)
             status_text.text("Completado")
             
-            # DEBUG OPCIONAL: Mostrar datos recibidos (COMENTADO PARA PRODUCCIÓN)
-            # st.markdown("""
-            # <div style="color: white; background-color: transparent; padding: 10px;">
-            #     <strong>🔍 Datos recibidos del backend:</strong>
-            # </div>
-            # """, unsafe_allow_html=True)
-            # st.json(data)
-            
-            # Mostrar resultado según el tipo de servicio
-            if service_type == "fuid":
-                display_fuid_result(data)
-            else:
-                display_individual_result(data)
+            # Mostrar resultado FUID
+            display_fuid_result(data)
                 
         else:
             error_data = resp.json()
@@ -574,29 +382,3 @@ def display_fuid_result(data):
                 <strong>📁 Ruta:</strong> <small>{ruta_final}</small>
             </div>
             """, unsafe_allow_html=True)
-
-
-def display_individual_result(data):
-    """Mostrar resultado del procesamiento individual."""
-    documentos_html = ""
-    if data.get('documentos') and len(data['documentos']) > 0:
-        documentos_html = "<hr><h6>📄 Documentos:</h6>"
-        for doc in data['documentos']:
-            documentos_html += f"""
-            <div style="border: 1px solid #81c784; padding: 8px; margin-bottom: 8px; border-radius: 6px; font-size: 14px;">
-                <strong>{doc.get('nombre', 'N/A')}</strong><br>
-                <strong>ID:</strong> {doc.get('id', 'N/A')}<br>
-                <strong>Extensión:</strong> {doc.get('extension', 'N/A')}<br>
-                <strong>Tamaño:</strong> {doc.get('tamano_kb', 'N/A')} KB
-            </div>
-            """
-    
-    st.markdown(f"""
-    <div class="result-success">
-        <h5>✅ Documento Procesado desde URL</h5>
-        <strong>Estado:</strong> {data.get('status', 'N/A')}<br>
-        <strong>Mensaje:</strong> {data.get('mensaje', 'N/A')}<br>
-        <strong>Documentos registrados:</strong> {len(data.get('documentos', []))}
-        {documentos_html}
-    </div>
-    """, unsafe_allow_html=True)
