@@ -1,18 +1,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
+from app.core.database import get_db
 from app.models.historial_documento import HistorialDocumento
 from app.api.auth import get_current_user
 
 router = APIRouter(prefix="/documentos/versiones", tags=["Versiones"])
-
-# --- Dependencia DB ---
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 # --- Listar documentos y sus versiones ---
 @router.get("/")

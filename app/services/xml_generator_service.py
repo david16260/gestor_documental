@@ -15,7 +15,9 @@ from datetime import datetime
 from pathlib import Path
 from app.models.documento import Documento
 from app.models.historial_documento import HistorialDocumento
-from app.config import UPLOAD_DIR
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 def generar_xml_documento(documento: Documento, usuario_nombre: str, orden: int = 1, 
@@ -380,7 +382,7 @@ def guardar_xml_documento(xml_string: str, nombre_archivo: str, usuario_id: int)
     """
     
     # Crear ruta del directorio XML del usuario
-    xml_dir = Path(UPLOAD_DIR) / f"user_{usuario_id}" / "xml"
+    xml_dir = settings.upload_dir / f"user_{usuario_id}" / "xml"
     
     # Crear directorio si no existe (incluyendo padres)
     xml_dir.mkdir(parents=True, exist_ok=True)

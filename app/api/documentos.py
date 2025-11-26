@@ -3,12 +3,14 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Form, Q
 from fastapi.responses import StreamingResponse
 from pathlib import Path
 from sqlalchemy.orm import Session
-from app.database import SessionLocal
+from app.core.database import get_db
 from app.models.documento import Documento
 from app.models.historial_documento import HistorialDocumento
 from app.utils.validaciones import validar_trd_ccd, tiene_firma_digital
 from app.api.auth import get_current_user
-from app.core.security import verificar_token
+from app.core.security import decode_token
+from app.core.config import get_settings
+from fastapi.security import OAuth2PasswordBearer
 import hashlib
 import os
 import magic
@@ -25,6 +27,11 @@ from app.services.exportador_service import ExportadorService
 from app.services.document_service import DocumentoSGDEAService
 from app.services.sgdea_services import ExpedienteService, InventarioService
 from app.schemas.sgdea import DocumentoSGDEA, DocumentoSGDEACreate, Expediente, ExpedienteCreate, Inventario, FormatoInventario
+from app.schemas.core import (
+    DocumentoUploadResponse,
+    HistorialResponse,
+    IndiceResponse,
+)
 
 # ============================================================
 # 🚀 Configuración del router
@@ -35,18 +42,20 @@ sgdea_router = APIRouter()
 # ============================================================
 # 📂 Directorio de subida y parámetros globales
 # ============================================================
-UPLOAD_DIR = Path("uploads")
+settings = get_settings()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+
+UPLOAD_DIR = settings.upload_dir
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".png", ".jpg", ".trd", ".ccd"}
-MAX_SIZE_BYTES = 10 * 1024 * 1024  # 10 MB
+ALLOWED_EXTENSIONS = set(settings.allowed_extensions)
+MAX_SIZE_BYTES = settings.max_upload_size
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+
+def verificar_token(token: str = Depends(oauth2_scheme)):
+    """Dependencia para validar el JWT en rutas SGDEA."""
+    return decode_token(token)
+
 
 def calcular_md5_contenido(contenido: bytes) -> str:
     return hashlib.md5(contenido).hexdigest()
@@ -55,7 +64,7 @@ def calcular_md5_contenido(contenido: bytes) -> str:
 # ===============================
 # ENDPOINT: SUBIR DOCUMENTO
 # ===============================
-@router.post("/upload")
+@router.post("/upload", response_model=DocumentoUploadResponse)
 async def upload_file(
     file: UploadFile = File(...),
     version: str = Form(...),
@@ -235,7 +244,7 @@ async def upload_file(
 # ===============================
 # ENDPOINT: HISTORIAL DE DOCUMENTOS POR USUARIO
 # ===============================
-@router.get("/historial")
+@router.get("/historial", response_model=HistorialResponse)
 def historial_documento(
     nombre_archivo: str, 
     db: Session = Depends(get_db), 
@@ -271,7 +280,7 @@ def historial_documento(
 # ============================================================
 # 📇 ENDPOINT: Generar índice foliado para el usuario autenticado
 # ============================================================
-@router.get("/indice_foliado")
+@router.get("/indice_foliado", response_model=IndiceResponse)
 def generar_indice_foliado(
     formato: str = Query("json", description="Formato de salida: json o csv"),
     db: Session = Depends(get_db),

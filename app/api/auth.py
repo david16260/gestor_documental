@@ -1,39 +1,37 @@
-# app/api/auth.py
-from fastapi import (
-    APIRouter, Form, HTTPException, Depends, status
-)
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from sqlalchemy.orm import Session
-from jose import JWTError, jwt
 from datetime import datetime, timedelta
-from pydantic import BaseModel
 import secrets
 
-# MODELOS Y UTILIDADES
-from app.models.usuario import Usuario
+from fastapi import APIRouter, Depends, Form, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from jose import JWTError
+from pydantic import BaseModel
+from sqlalchemy.orm import Session
+
+from app.config import settings
 from app.core.database import get_db
-from app.core.security import hash_password, verify_password
+from app.core.security import (
+    create_access_token,
+    decode_token,
+    hash_password,
+    verify_password,
+)
+from app.models.usuario import Usuario
 
-# ===================================
-# CONFIGURACIÓN JWT
-# ===================================
-SECRET_KEY = "mi_clave_secreta_para_jwt"  # mover a .env en producción
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 router = APIRouter(tags=["Autenticación"])
 
-# ===================================
-# REGISTRO DE USUARIOS
-# ===================================
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+
 @router.post("/register")
 def register(
     nombre: str = Form(...),
     email: str = Form(...),
     password: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     usuario_existente = db.query(Usuario).filter(Usuario.email == email).first()
     if usuario_existente:
@@ -43,7 +41,7 @@ def register(
         nombre=nombre,
         email=email,
         password_hash=hash_password(password),
-        rol="usuario"  # Rol por defecto del archivo 2
+        rol="usuario",
     )
 
     db.add(nuevo_usuario)
@@ -54,33 +52,14 @@ def register(
         "id": nuevo_usuario.id,
         "nombre": nuevo_usuario.nombre,
         "email": nuevo_usuario.email,
-        "rol": nuevo_usuario.rol  # Incluir rol en respuesta
+        "rol": nuevo_usuario.rol,
     }
 
-# ===================================
-# GENERAR TOKEN JWT (FUNCIÓN UNIFICADA)
-# ===================================
-def crear_token_jwt(data: dict, expires_delta: timedelta | None = None):
-    """
-    Función unificada para generar tokens JWT
-    Compatible con ambos enfoques de los archivos originales
-    """
-    to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
 
-# Alias para compatibilidad
-generar_token = crear_token_jwt
-
-# ===================================
-# LOGIN (DEVUELVE TOKEN - VERSIÓN MEJORADA)
-# ===================================
 @router.post("/login")
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     usuario = db.query(Usuario).filter(Usuario.email == form_data.username).first()
 
@@ -90,23 +69,19 @@ def login(
     if not verify_password(form_data.password, usuario.password_hash):
         raise HTTPException(status_code=401, detail="Contraseña incorrecta")
 
-    # Crear token JWT con información mejorada (combinando ambos enfoques)
-    access_token = crear_token_jwt(data={
-        "sub": str(usuario.id),  # Del archivo 1
-        "email": usuario.email,  # Del archivo 2
-        "rol": usuario.rol       # Del archivo 2
-    })
+    access_token = create_access_token(
+        data={"sub": str(usuario.id), "email": usuario.email, "rol": usuario.rol},
+        expires_delta=settings.access_token_expire_minutes,
+    )
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "usuario": usuario.nombre,  # Del archivo 1
-        "rol": usuario.rol          # Del archivo 2
+        "usuario": usuario.nombre,
+        "rol": usuario.rol,
     }
 
-# ===================================
-# OBTENER USUARIO ACTUAL (VERSIÓN ROBUSTA)
-# ===================================
+
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -114,52 +89,36 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        
-        # Compatibilidad con ambos formatos de token
-        user_id = payload.get("sub")
-        email = payload.get("email")
-        
-        if user_id:
-            # Formato del archivo 1: sub contiene el ID
-            user = db.query(Usuario).filter(Usuario.id == int(user_id)).first()
-        elif email:
-            # Formato del archivo 2: sub contiene el email
-            user = db.query(Usuario).filter(Usuario.email == email).first()
-        else:
-            raise credentials_exception
-            
-        if user is None:
-            raise credentials_exception
-        return user
-        
+        payload = decode_token(token)
     except JWTError:
         raise credentials_exception
 
-# ===================================
-# MIDDLEWARE DE ROLES (DEL ARCHIVO 2)
-# ===================================
+    user_id = payload.get("sub")
+    email = payload.get("email")
+
+    if user_id:
+        user = db.query(Usuario).filter(Usuario.id == int(user_id)).first()
+    elif email:
+        user = db.query(Usuario).filter(Usuario.email == email).first()
+    else:
+        raise credentials_exception
+
+    if user is None:
+        raise credentials_exception
+    return user
+
+
 def require_role(*allowed_roles):
-    """
-    Protege rutas según roles permitidos.
-    Uso:
-    Depends(require_role("admin"))
-    """
     def role_checker(current_user=Depends(get_current_user)):
         if current_user.rol not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="No tienes permisos para acceder a este recurso"
+                detail="No tienes permisos para acceder a este recurso",
             )
         return current_user
 
     return role_checker
 
-# ===================================
-# RECUPERAR CONTRASEÑA
-# ===================================
-class ForgotPasswordRequest(BaseModel):
-    email: str
 
 @router.post("/forgot-password")
 def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
@@ -168,29 +127,25 @@ def forgot_password(req: ForgotPasswordRequest, db: Session = Depends(get_db)):
     if not usuario:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    # Generar token aleatorio y expiración
     token = secrets.token_urlsafe(32)
-    expiracion = datetime.utcnow() + timedelta(minutes=30)  # 30 min de validez
+    expiracion = datetime.utcnow() + timedelta(minutes=30)
 
     usuario.reset_token = token
     usuario.reset_token_exp = expiracion
 
     db.commit()
 
-    # Mensaje combinado de ambos archivos
     return {
         "mensaje": "Token generado. Úselo en /reset-password",
-        "reset_token": token
+        "reset_token": token,
     }
 
-# ===================================
-# RESTABLECER CONTRASEÑA
-# ===================================
+
 @router.post("/reset-password")
 def reset_password(
     token: str = Form(...),
     nueva_password: str = Form(...),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     usuario = db.query(Usuario).filter(Usuario.reset_token == token).first()
 
@@ -200,7 +155,6 @@ def reset_password(
     if usuario.reset_token_exp is None or usuario.reset_token_exp < datetime.utcnow():
         raise HTTPException(status_code=400, detail="Token expirado")
 
-    # Actualizar contraseña y limpiar token
     usuario.password_hash = hash_password(nueva_password)
     usuario.reset_token = None
     usuario.reset_token_exp = None

@@ -1,7 +1,7 @@
 # app/api/xml_routes.py
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
-from app.database import get_db
+from app.core.database import get_db
 from app.models.documento import Documento
 from app.models.usuario import Usuario
 from app.services.xml_generator_service import (

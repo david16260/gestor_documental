@@ -7,7 +7,7 @@ import tempfile
 import os
 from pathlib import Path
 import hashlib
-from app.database import get_db
+from app.core.database import get_db
 from app.services.ia_contextual_service import IAContextualService
 from app.models.documento import Documento
 from app.models.fuid_models import ExpedienteFUID, FUID

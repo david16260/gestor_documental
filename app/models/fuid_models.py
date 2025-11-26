@@ -2,7 +2,7 @@
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.sqlite import JSON as SQLiteJSON
-from app.database import Base
+from app.core.database import Base
 from datetime import datetime
 from sqlalchemy.sql import func
 

@@ -6,9 +6,11 @@ from pathlib import Path
 
 from app.services.google_drive import (
     download_drive_file,
-    download_drive_folder
+    download_drive_folder,
 )
-from app.config import UPLOAD_DIR
+from app.core.config import get_settings
+
+settings = get_settings()
 
 
 def extract_drive_id(url: str):
@@ -37,7 +39,7 @@ def process_external_document(url: str, usuario_id: int, version="1.0"):
 
     # Carpeta Drive
     if drive_id and tipo == "folder":
-        out_dir = Path(UPLOAD_DIR) / f"user_{usuario_id}" / drive_id
+        out_dir = settings.upload_dir / f"user_{usuario_id}" / drive_id
         rutas = download_drive_folder(drive_id, out_dir)
 
         for ruta in rutas:
@@ -59,7 +61,7 @@ def process_external_document(url: str, usuario_id: int, version="1.0"):
 
     # Archivo Drive
     if drive_id and tipo == "file":
-        out_dir = Path(UPLOAD_DIR) / f"user_{usuario_id}"
+        out_dir = settings.upload_dir / f"user_{usuario_id}"
         out_dir.mkdir(exist_ok=True, parents=True)
 
         ruta = download_drive_file(drive_id, out_dir)

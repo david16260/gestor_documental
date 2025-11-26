@@ -78,3 +78,16 @@ deactivate
 ## Probar navegador
 http://127.0.0.1:8000/docs
 
+## Contenedores (Docker)
+- Build: `docker build -t gestor-documental .`
+- Levantar con base de datos: `docker-compose up --build`
+- La API queda en `http://localhost:8000/api/v1`
+
+## Arquitectura y cumplimiento (actualizado)
+- API FastAPI versionada en `/api/v1` con routers por dominio: autenticación, documentos, TRD/CCD, ingesta, clasificación IA, expedientes/índices, FUID y adaptador SGDEA.
+- Configuración centralizada con `.env` (`app/core/config.py`), un único `Base`/`engine`/`SessionLocal` (`app/core/database.py`) y CORS habilitado.
+- Seguridad con JWT y hash bcrypt (`app/core/security.py`), roles y protección de rutas; endpoints de recuperación de contraseña.
+- Modelos principales: usuarios, documentos, historial, TRD/CCD, expedientes, FUID; generación de XML e índices foliados.
+- Servicios de IA y clasificación basada en reglas (`app/services/ia_classifier.py`), importación desde Drive y validación de TRD/CCD.
+- Pruebas iniciales en `tests/test_smoke.py` y pipeline CI (`.github/workflows/ci.yml`).
+

@@ -4,7 +4,7 @@ from pathlib import Path
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseDownload
 from google.oauth2 import service_account
-from app.config import UPLOAD_DIR
+from app.core.config import get_settings
 
 SERVICE_ACCOUNT_FILE = "app/keys/drive_service_account.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]

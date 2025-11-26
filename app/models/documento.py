@@ -1,6 +1,6 @@
 # app/models/documento.py
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Float
-from app.database import Base
+from app.core.database import Base
 from sqlalchemy.sql import func
 
 class Documento(Base):
@@ -15,13 +15,14 @@ class Documento(Base):
     tamano_kb = Column(Float, nullable=False)
     duplicado = Column(Boolean, default=False)
     usuario_id = Column(Integer, ForeignKey("usuarios.id"), nullable=False)
+    expediente_id = Column(Integer, ForeignKey("expedientes.id"), nullable=True)
     creado_en = Column(DateTime, server_default=func.now())
     # Metadatos extra
     content_type = Column(String, nullable=True)
     last_modified = Column(String, nullable=True)
     servidor = Column(String, nullable=True)
     categoria = Column(String, nullable=True) 
-        # Nuevos campos para FUID
+    # Nuevos campos para FUID
     area = Column(String(100))
     serie = Column(String(100))
     subserie = Column(String(100))

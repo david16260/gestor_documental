@@ -1,9 +1,14 @@
 from pathlib import Path
-from app.core.config import UPLOAD_DIR
+
+from app.core.config import get_settings
+
+settings = get_settings()
+
 
 def listar_documentos():
     """Lista todos los documentos subidos."""
-    return [f.name for f in UPLOAD_DIR.iterdir() if f.is_file()]
+    upload_dir: Path = settings.upload_dir
+    return [f.name for f in upload_dir.iterdir() if f.is_file()]
 # ========== SERVICIOS SGDEA ==========
 from app.schemas.sgdea import DocumentoSGDEA, DocumentoSGDEACreate
 import uuid

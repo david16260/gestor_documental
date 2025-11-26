@@ -1,16 +1,17 @@
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-# Configuración de conexión a PostgreSQL
-DATABASE_URL = "postgresql://postgres:12345@localhost:5432/gestor_documental"
+from app.core.config import get_settings
 
-engine = create_engine(DATABASE_URL)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+settings = get_settings()
+
+engine = create_engine(settings.database_url, future=True)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
 Base = declarative_base()
 
-# Dependencia para inyección de DB
+
 def get_db():
+    """Dependency to provide a DB session per request."""
     db = SessionLocal()
     try:
         yield db

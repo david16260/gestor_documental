@@ -1,9 +1,9 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime
 from datetime import datetime
-from app.database import Base
+from app.core.database import Base
 
 class Auditoria(Base):
-    _tablename_ = 'auditoria'
+    __tablename__ = "auditoria"
 
     id = Column(Integer, primary_key=True, index=True)
     usuario = Column(String(100), nullable=False)
@@ -12,5 +12,5 @@ class Auditoria(Base):
     detalle = Column(Text, nullable=True)
     fecha_hora = Column(DateTime, default=datetime.utcnow)
 
-    def _repr_(self):
-        return f'<Auditoria {self.usuario} - {self.accion}>'
+    def __repr__(self):
+        return f"<Auditoria {self.usuario} - {self.accion}>"

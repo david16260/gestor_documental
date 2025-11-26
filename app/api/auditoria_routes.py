@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from app.core.auditoria_controller import obtener_auditoria, registrar_auditoria
-from app.database import get_db
+from app.core.database import get_db
 from app.models.auditoria_model import Auditoria
 # Si tienes autenticación, descomenta la siguiente línea:
 # from app.core.security import require_role
